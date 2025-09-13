@@ -1,0 +1,178 @@
+/* espera.css - Estilos específicos para a página de espera */
+body {
+  background: linear-gradient(135deg, #0a0a1a 0%, #1a1a3a 100%);
+  font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+  height: 100vh;
+  overflow: hidden;
+}
+
+.waiting-container {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: url("../arquivos/imagens/bg-espera.jpg") no-repeat center center;
+  background-size: cover;
+  position: relative;
+}
+
+.waiting-container::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(10, 10, 30, 0.9);
+  z-index: 1;
+}
+
+.waiting-content {
+  position: relative;
+  z-index: 2;
+  text-align: center;
+  color: #e0e0ff;
+  max-width: 600px;
+  padding: 30px;
+}
+
+.waiting-title {
+  font-size: 2.2rem;
+  font-weight: 700;
+  color: #a0e0ff;
+  margin-bottom: 1.5rem;
+  text-shadow: 0 0 10px rgba(160, 224, 255, 0.5);
+}
+
+.waiting-text {
+  font-size: 1.2rem;
+  margin-bottom: 2rem;
+  color: #c0c0ff;
+}
+
+.player-count {
+  font-size: 1.1rem;
+  color: #9090ff;
+  margin-bottom: 2rem;
+  background: rgba(20, 20, 45, 0.7);
+  padding: 10px 20px;
+  border-radius: 8px;
+  display: inline-block;
+}
+
+/* Loader animation */
+.loader {
+  width: 80px;
+  height: 80px;
+  margin: 0 auto 2rem;
+  position: relative;
+}
+
+.loader-inner {
+  position: absolute;
+  border: 4px solid #4a4a8a;
+  border-radius: 50%;
+  animation: pulse 1.5s infinite;
+}
+
+.loader-inner:nth-child(1) {
+  width: 100%;
+  height: 100%;
+  animation-delay: 0s;
+}
+
+.loader-inner:nth-child(2) {
+  width: 80%;
+  height: 80%;
+  top: 10%;
+  left: 10%;
+  animation-delay: 0.2s;
+}
+
+.loader-inner:nth-child(3) {
+  width: 60%;
+  height: 60%;
+  top: 20%;
+  left: 20%;
+  animation-delay: 0.4s;
+}
+
+@keyframes pulse {
+  0% {
+    transform: scale(0.8);
+    opacity: 0.7;
+    border-color: #4a4a8a;
+  }
+  50% {
+    transform: scale(1);
+    opacity: 0.3;
+    border-color: #60a0ff;
+  }
+  100% {
+    transform: scale(0.8);
+    opacity: 0.7;
+    border-color: #4a4a8a;
+  }
+}
+
+/* Cancel button */
+.btn-cancel {
+  background: rgba(120, 40, 40, 0.7);
+  border: 1px solid #8a4a4a;
+  color: #ffc0c0;
+  padding: 10px 20px;
+  border-radius: 8px;
+  transition: all 0.3s;
+}
+
+.btn-cancel:hover {
+  background: rgba(140, 50, 50, 0.9);
+  color: #ffffff;
+}
+
+/* Status animation */
+.status-animation {
+  margin: 2rem auto;
+  width: 100%;
+  height: 4px;
+  background: rgba(96, 160, 255, 0.2);
+  border-radius: 2px;
+  overflow: hidden;
+  position: relative;
+}
+
+.status-animation::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(90deg, transparent, #60a0ff, transparent);
+  animation: scanning 2s infinite linear;
+}
+
+@keyframes scanning {
+  0% {
+    left: -100%;
+  }
+  100% {
+    left: 100%;
+  }
+}
+
+/* Responsividade */
+@media (max-width: 768px) {
+  .waiting-title {
+    font-size: 1.8rem;
+  }
+
+  .waiting-text {
+    font-size: 1rem;
+  }
+
+  .loader {
+    width: 60px;
+    height: 60px;
+  }
+}

@@ -1,0 +1,200 @@
+/* index.css - Estilos específicos para a página inicial */
+body {
+  background: linear-gradient(135deg, #0a0a1a 0%, #1a1a3a 100%);
+  font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+  height: 100vh;
+  overflow: hidden;
+  margin: 0;
+  color: #e0e0ff; /* Cor padrão do texto */
+}
+
+.birdbox-container {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: url("../arquivos/imagens/bg-inicio.jpg") no-repeat center center;
+  background-size: cover;
+  position: relative;
+  padding: 20px;
+}
+
+.birdbox-container::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(
+    5,
+    5,
+    15,
+    0.85
+  ); /* Fundo mais escuro para melhor contraste */
+  z-index: 1;
+}
+
+.birdbox-card {
+  position: relative;
+  z-index: 2;
+  background: rgba(15, 15, 35, 0.95); /* Fundo mais escuro */
+  border: 1px solid #4a4a8a;
+  border-radius: 15px;
+  box-shadow: 0 0 30px rgba(80, 120, 255, 0.3);
+  backdrop-filter: blur(10px);
+  animation: fadeIn 1s ease-out;
+  padding: 30px;
+  max-width: 500px;
+  width: 100%;
+}
+
+.card-content {
+  text-align: center;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.birdbox-title {
+  font-size: 2.5rem;
+  font-weight: 700;
+  background: linear-gradient(45deg, #a0e0ff, #60a0ff);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  text-shadow: 0 0 15px rgba(96, 160, 255, 0.5);
+  margin-bottom: 0.5rem;
+}
+
+.birdbox-subtitle {
+  color: #c0c0ff; /* Texto mais claro para melhor contraste */
+  font-size: 1.1rem;
+  margin-bottom: 2rem;
+  line-height: 1.5;
+}
+
+.form-group {
+  margin-bottom: 1.5rem;
+  text-align: left;
+}
+
+.form-group label {
+  display: block;
+  margin-bottom: 0.5rem;
+  color: #c0c0ff; /* Texto mais claro */
+  font-weight: 500;
+}
+
+.form-control {
+  background: rgba(10, 10, 25, 0.8); /* Fundo mais escuro */
+  border: 1px solid #4a4a8a;
+  color: #ffffff; /* Texto branco puro para máximo contraste */
+  padding: 12px 15px;
+  border-radius: 8px;
+  transition: all 0.3s;
+  width: 100%;
+  font-size: 1rem;
+}
+
+.form-control:focus {
+  background: rgba(15, 15, 35, 0.9);
+  border-color: #60a0ff;
+  box-shadow: 0 0 0 0.25rem rgba(96, 160, 255, 0.25);
+  color: #ffffff;
+  outline: none;
+}
+
+.form-control::placeholder {
+  color: #9090c0;
+}
+
+.btn-birdbox {
+  background: linear-gradient(45deg, #4a4a8a, #3a3a7a);
+  border: none;
+  color: #ffffff;
+  padding: 14px 25px;
+  border-radius: 8px;
+  font-weight: 600;
+  transition: all 0.3s;
+  box-shadow: 0 4px 15px rgba(80, 120, 255, 0.3);
+  width: 100%;
+  font-size: 1.1rem;
+  cursor: pointer;
+  margin-bottom: 1rem;
+}
+
+.btn-birdbox:hover {
+  background: linear-gradient(45deg, #5a5a9a, #4a4a8a);
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(80, 120, 255, 0.4);
+}
+
+.btn-birdbox:active {
+  transform: translateY(0);
+}
+
+.info-text {
+  color: #a0a0e0; /* Texto mais claro */
+  font-size: 0.9rem;
+  margin-top: 1.5rem;
+  line-height: 1.4;
+}
+
+/* Responsividade */
+@media (max-width: 768px) {
+  .birdbox-title {
+    font-size: 2rem;
+  }
+
+  .birdbox-subtitle {
+    font-size: 1rem;
+  }
+
+  .birdbox-card {
+    padding: 20px;
+    margin: 0 15px;
+  }
+}
+
+/* Animações de partículas de fundo */
+.particles {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 0;
+  overflow: hidden;
+}
+
+.particle {
+  position: absolute;
+  background: rgba(96, 160, 255, 0.2); /* Partículas mais sutis */
+  border-radius: 50%;
+  animation: float 15s infinite linear;
+}
+
+@keyframes float {
+  0% {
+    transform: translateY(0) translateX(0);
+    opacity: 0;
+  }
+  10% {
+    opacity: 0.7;
+  }
+  90% {
+    opacity: 0.7;
+  }
+  100% {
+    transform: translateY(-100vh) translateX(100px);
+    opacity: 0;
+  }
+}
