@@ -369,6 +369,69 @@ body {
   transform: none;
 }
 
+/* Controles de Navegação */
+.navigation-controls {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 15px;
+  margin-top: 20px;
+  padding: 15px;
+  background-color: #f8f9fa;
+  border-radius: 10px;
+  flex-wrap: wrap;
+}
+
+.nav-btn {
+  padding: 8px 16px;
+  border: none;
+  border-radius: 5px;
+  background-color: #007bff;
+  color: white;
+  cursor: pointer;
+  transition: all 0.3s;
+  font-weight: 600;
+}
+
+.nav-btn:disabled {
+  background-color: #6c757d;
+  cursor: not-allowed;
+}
+
+.nav-btn:hover:not(:disabled) {
+  background-color: #0056b3;
+  transform: translateY(-2px);
+}
+
+.finish-btn {
+  padding: 10px 20px;
+  border: none;
+  border-radius: 5px;
+  background-color: #28a745;
+  color: white;
+  cursor: pointer;
+  font-weight: bold;
+  transition: all 0.3s;
+}
+
+.finish-btn:disabled {
+  background-color: #6c757d;
+  cursor: not-allowed;
+}
+
+.finish-btn:hover:not(:disabled) {
+  background-color: #218838;
+  transform: translateY(-2px);
+}
+
+#questionNumber,
+#questionNumberIdentifier {
+  font-weight: bold;
+  margin: 0 15px;
+  color: var(--text-primary);
+  font-size: 1.1rem;
+}
+
 /* Overlay de Carregamento e Fim de Jogo */
 .game-overlay {
   position: fixed;
@@ -493,7 +556,9 @@ body {
 .audio-btn:focus,
 .submit-btn:focus,
 .action-btn:focus,
-.option-btn:focus {
+.option-btn:focus,
+.nav-btn:focus,
+.finish-btn:focus {
   outline: 2px solid var(--primary-color);
   outline-offset: 2px;
 }
@@ -531,6 +596,10 @@ body {
 
   .result-actions {
     flex-direction: row;
+  }
+
+  .navigation-controls {
+    flex-wrap: nowrap;
   }
 }
 
@@ -576,6 +645,18 @@ body {
   .option-text {
     font-size: 0.9rem;
   }
+
+  .nav-btn,
+  .finish-btn {
+    padding: 6px 12px;
+    font-size: 0.9rem;
+  }
+
+  #questionNumber,
+  #questionNumberIdentifier {
+    font-size: 0.9rem;
+    margin: 0 8px;
+  }
 }
 
 /* Prevenir zoom em inputs no iOS */
@@ -592,14 +673,18 @@ body {
   .audio-btn:hover,
   .option-btn:hover,
   .submit-btn:hover,
-  .action-btn:hover {
+  .action-btn:hover,
+  .nav-btn:hover,
+  .finish-btn:hover {
     transform: none;
   }
 
   .audio-btn:active,
   .option-btn:active,
   .submit-btn:active,
-  .action-btn:active {
+  .action-btn:active,
+  .nav-btn:active,
+  .finish-btn:active {
     transform: scale(0.98);
   }
 }

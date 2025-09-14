@@ -31,8 +31,8 @@
                         <span id="gameTimer">03:00</span>
                     </div>
                     <div class="info-item">
-                        <span class="info-label">Rodada:</span>
-                        <span id="currentRound">1/4</span>
+                        <span class="info-label">Pergunta:</span>
+                        <span id="questionCounter">1/4</span>
                     </div>
                     <div class="info-item">
                         <span class="info-label">Pontos:</span>
@@ -81,8 +81,16 @@
                     <div class="status-card">
                         <h4>Status da Partida</h4>
                         <p id="partnerStatus">Aguardando descrição do parceiro...</p>
-                        <p id="roundInfo">Rodada 1 de 4</p>
+                        <p id="roundInfo">Pergunta 1 de 4</p>
                     </div>
+                </div>
+
+                <!-- Controles de Navegação -->
+                <div class="navigation-controls">
+                    <button id="prevQuestion" class="nav-btn" disabled>← Anterior</button>
+                    <span id="questionNumber">1/4</span>
+                    <button id="nextQuestion" class="nav-btn">Próxima →</button>
+                    <button id="finishQuiz" class="finish-btn" disabled>Finalizar Questionário</button>
                 </div>
             </div>
 
@@ -125,6 +133,14 @@
                         Confirmar Resposta
                     </button>
                 </div>
+
+                <!-- Controles de Navegação -->
+                <div class="navigation-controls">
+                    <button id="prevQuestionIdentifier" class="nav-btn" disabled>← Anterior</button>
+                    <span id="questionNumberIdentifier">1/4</span>
+                    <button id="nextQuestionIdentifier" class="nav-btn">Próxima →</button>
+                    <button id="finishQuizIdentifier" class="finish-btn">Finalizar Questionário</button>
+                </div>
             </div>
         </main>
 
@@ -134,7 +150,7 @@
                 <h2>Fim de Jogo!</h2>
                 <div class="score-display">
                     <p class="final-score">Pontuação Final: <span id="finalScore">0</span></p>
-                    <p class="rounds-completed">Rodadas Completas: <span id="roundsCompleted">0</span>/4</p>
+                    <p class="rounds-completed">Perguntas Respondidas: <span id="roundsCompleted">0</span>/4</p>
                     <p class="accuracy">Precisão: <span id="accuracyPercentage">0%</span></p>
                 </div>
                 <div class="result-actions">
@@ -160,6 +176,7 @@
         <script src="scripts/perguntas.js"></script>
         <script src="scripts/ouvinte.js"></script>
         <script src="scripts/leitor.js"></script>
+    </div>
 </body>
 
 </html>

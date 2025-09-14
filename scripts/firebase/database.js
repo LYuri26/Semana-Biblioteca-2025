@@ -70,6 +70,22 @@ class FirebaseDatabase {
   // Criar uma nova partida
   async createNewGame(player1Id, player1Name, player2Id, player2Name) {
     try {
+      // Verificar se os jogadores já estão em algum jogo ativo
+      const player1InGame = await this.isPlayerInActiveGame(player1Id);
+      const player2InGame = await this.isPlayerInActiveGame(player2Id);
+
+      if (player1InGame || player2InGame) {
+        console.log(
+          "Um dos jogadores já está em jogo ativo. Cancelando criação."
+        );
+
+        // Remover da fila
+        await this.removePlayerFromQueue(player1Id);
+        await this.removePlayerFromQueue(player2Id);
+
+        return null;
+      }
+
       const gameId = this.generateGameId();
       const gameData = {
         jogadores: {
@@ -88,7 +104,7 @@ class FirebaseDatabase {
         },
         status: "ativo",
         timestamp: Date.now(),
-        perguntaAtual: null,
+        currentQuestionIndex: 0,
         round: 1,
         duracao: 0,
       };
@@ -98,6 +114,28 @@ class FirebaseDatabase {
     } catch (error) {
       console.error("Erro ao criar partida:", error);
       return null;
+    }
+  }
+
+  async isPlayerInActiveGame(playerId) {
+    try {
+      const gameIdSnapshot = await this.db
+        .ref(`birdbox/players/${playerId}/currentGame`)
+        .once("value");
+      const gameId = gameIdSnapshot.val();
+
+      if (gameId) {
+        const gameSnapshot = await this.db
+          .ref(`birdbox/games/${gameId}`)
+          .once("value");
+        const gameData = gameSnapshot.val();
+
+        return gameData && gameData.status === "ativo";
+      }
+      return false;
+    } catch (error) {
+      console.error("Erro ao verificar jogo ativo:", error);
+      return false;
     }
   }
 
