@@ -1,11 +1,21 @@
-/* index.css - Estilos específicos para a página inicial */
+/* index.css - Mobile First */
+:root {
+  --primary-color: #4361ee;
+  --secondary-color: #3a0ca3;
+  --accent-color: #f72585;
+  --light-color: #f8f9fa;
+  --dark-color: #1a1a2e;
+  --text-light: #e0e0ff;
+  --text-muted: #9090c0;
+}
+
 body {
-  background: linear-gradient(135deg, #0a0a1a 0%, #1a1a3a 100%);
-  font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
-  height: 100vh;
-  overflow: hidden;
+  background: linear-gradient(135deg, var(--dark-color) 0%, #16213e 100%);
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  min-height: 100vh;
+  color: var(--text-light);
   margin: 0;
-  color: #e0e0ff; /* Cor padrão do texto */
+  padding: 0;
 }
 
 .birdbox-container {
@@ -13,10 +23,8 @@ body {
   display: flex;
   align-items: center;
   justify-content: center;
-  background: url("../arquivos/imagens/bg-inicio.jpg") no-repeat center center;
-  background-size: cover;
+  padding: 1rem;
   position: relative;
-  padding: 20px;
 }
 
 .birdbox-container::before {
@@ -26,27 +34,22 @@ body {
   left: 0;
   width: 100%;
   height: 100%;
-  background: rgba(
-    5,
-    5,
-    15,
-    0.85
-  ); /* Fundo mais escuro para melhor contraste */
+  background: rgba(10, 10, 30, 0.9);
   z-index: 1;
 }
 
 .birdbox-card {
   position: relative;
   z-index: 2;
-  background: rgba(15, 15, 35, 0.95); /* Fundo mais escuro */
+  background: rgba(20, 20, 40, 0.95);
   border: 1px solid #4a4a8a;
-  border-radius: 15px;
-  box-shadow: 0 0 30px rgba(80, 120, 255, 0.3);
+  border-radius: 12px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
   backdrop-filter: blur(10px);
-  animation: fadeIn 1s ease-out;
-  padding: 30px;
-  max-width: 500px;
+  padding: 2rem;
   width: 100%;
+  max-width: 400px;
+  animation: fadeIn 0.5s ease-out;
 }
 
 .card-content {
@@ -65,39 +68,39 @@ body {
 }
 
 .birdbox-title {
-  font-size: 2.5rem;
+  font-size: 2rem;
   font-weight: 700;
-  background: linear-gradient(45deg, #a0e0ff, #60a0ff);
+  background: linear-gradient(45deg, #a0e0ff, var(--primary-color));
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
-  text-shadow: 0 0 15px rgba(96, 160, 255, 0.5);
   margin-bottom: 0.5rem;
 }
 
 .birdbox-subtitle {
-  color: #c0c0ff; /* Texto mais claro para melhor contraste */
-  font-size: 1.1rem;
+  color: var(--text-muted);
+  font-size: 1rem;
   margin-bottom: 2rem;
-  line-height: 1.5;
+  line-height: 1.4;
 }
 
 .form-group {
-  margin-bottom: 1.5rem;
+  margin-bottom: 1.2rem;
   text-align: left;
 }
 
 .form-group label {
   display: block;
   margin-bottom: 0.5rem;
-  color: #c0c0ff; /* Texto mais claro */
+  color: var(--text-light);
   font-weight: 500;
+  font-size: 0.9rem;
 }
 
 .form-control {
-  background: rgba(10, 10, 25, 0.8); /* Fundo mais escuro */
+  background: rgba(30, 30, 60, 0.8);
   border: 1px solid #4a4a8a;
-  color: #ffffff; /* Texto branco puro para máximo contraste */
-  padding: 12px 15px;
+  color: white;
+  padding: 0.8rem;
   border-radius: 8px;
   transition: all 0.3s;
   width: 100%;
@@ -105,36 +108,36 @@ body {
 }
 
 .form-control:focus {
-  background: rgba(15, 15, 35, 0.9);
-  border-color: #60a0ff;
-  box-shadow: 0 0 0 0.25rem rgba(96, 160, 255, 0.25);
-  color: #ffffff;
+  border-color: var(--primary-color);
+  box-shadow: 0 0 0 2px rgba(67, 97, 238, 0.2);
   outline: none;
 }
 
 .form-control::placeholder {
-  color: #9090c0;
+  color: var(--text-muted);
 }
 
 .btn-birdbox {
-  background: linear-gradient(45deg, #4a4a8a, #3a3a7a);
+  background: linear-gradient(
+    45deg,
+    var(--primary-color),
+    var(--secondary-color)
+  );
   border: none;
-  color: #ffffff;
-  padding: 14px 25px;
+  color: white;
+  padding: 1rem;
   border-radius: 8px;
   font-weight: 600;
   transition: all 0.3s;
-  box-shadow: 0 4px 15px rgba(80, 120, 255, 0.3);
   width: 100%;
-  font-size: 1.1rem;
+  font-size: 1rem;
   cursor: pointer;
   margin-bottom: 1rem;
 }
 
 .btn-birdbox:hover {
-  background: linear-gradient(45deg, #5a5a9a, #4a4a8a);
-  transform: translateY(-2px);
-  box-shadow: 0 6px 20px rgba(80, 120, 255, 0.4);
+  transform: translateY(-1px);
+  box-shadow: 0 6px 20px rgba(67, 97, 238, 0.4);
 }
 
 .btn-birdbox:active {
@@ -142,59 +145,39 @@ body {
 }
 
 .info-text {
-  color: #a0a0e0; /* Texto mais claro */
-  font-size: 0.9rem;
+  color: var(--text-muted);
+  font-size: 0.8rem;
   margin-top: 1.5rem;
   line-height: 1.4;
 }
 
 /* Responsividade */
 @media (max-width: 768px) {
+  .birdbox-card {
+    padding: 1.5rem;
+    margin: 0 1rem;
+  }
+
   .birdbox-title {
-    font-size: 2rem;
+    font-size: 1.8rem;
   }
 
   .birdbox-subtitle {
-    font-size: 1rem;
+    font-size: 0.9rem;
   }
+}
 
+@media (max-width: 320px) {
   .birdbox-card {
-    padding: 20px;
-    margin: 0 15px;
+    padding: 1rem;
   }
-}
 
-/* Animações de partículas de fundo */
-.particles {
-  position: absolute;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-  z-index: 0;
-  overflow: hidden;
-}
+  .birdbox-title {
+    font-size: 1.5rem;
+  }
 
-.particle {
-  position: absolute;
-  background: rgba(96, 160, 255, 0.2); /* Partículas mais sutis */
-  border-radius: 50%;
-  animation: float 15s infinite linear;
-}
-
-@keyframes float {
-  0% {
-    transform: translateY(0) translateX(0);
-    opacity: 0;
-  }
-  10% {
-    opacity: 0.7;
-  }
-  90% {
-    opacity: 0.7;
-  }
-  100% {
-    transform: translateY(-100vh) translateX(100px);
-    opacity: 0;
+  .btn-birdbox {
+    padding: 0.8rem;
+    font-size: 0.9rem;
   }
 }
