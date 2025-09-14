@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>BirdBox Game - Em Andamento</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="estilos/jogo.css">
+</head>
+
+<body>
+    <div class="game-container">
+        <!-- Overlay de Carregamento -->
+        <div id="loadingOverlay" class="game-overlay active">
+            <div class="loading-content">
+                <div class="spinner-border text-primary" role="status">
+                    <span class="visually-hidden">Carregando...</span>
+                </div>
+                <p>Preparando o jogo...</p>
+            </div>
+        </div>
+
+        <!-- Header do Jogo -->
+        <header class="game-header">
+            <div class="header-content">
+                <h1 class="game-title">BirdBox</h1>
+                <div class="game-info">
+                    <div class="info-item">
+                        <span class="info-label">Tempo:</span>
+                        <span id="gameTimer">03:00</span>
+                    </div>
+                    <div class="info-item">
+                        <span class="info-label">Rodada:</span>
+                        <span id="currentRound">1/4</span>
+                    </div>
+                    <div class="info-item">
+                        <span class="info-label">Pontos:</span>
+                        <span id="playerScore">0</span>
+                    </div>
+                </div>
+            </div>
+        </header>
+
+        <!-- Conteúdo Principal do Jogo -->
+        <main class="game-main">
+            <!-- Visão do Ouvinte -->
+            <div id="listenerView" class="game-view hidden">
+                <div class="role-header">
+                    <h2>🎧 Você é o Ouvinte</h2>
+                    <p class="role-description">Escute atentamente e descreva o som para seu parceiro</p>
+                </div>
+
+                <div class="sound-section">
+                    <div class="audio-player">
+                        <audio id="soundPlayer" controls></audio>
+                        <div class="audio-controls">
+                            <button id="playSound" class="audio-btn">
+                                <span class="audio-icon">▶️</span>
+                                Reproduzir Som
+                            </button>
+                            <button id="replaySound" class="audio-btn" disabled>
+                                <span class="audio-icon">🔁</span>
+                                Repetir
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="description-guide">
+                        <h4>Como Descrever:</h4>
+                        <ul>
+                            <li>Descreva o som com suas próprias palavras</li>
+                            <li>Use comparações e metáforas</li>
+                            <li>Mencione a intensidade e ritmo</li>
+                            <li>Descreva as sensações que o som provoca</li>
+                        </ul>
+                    </div>
+                </div>
+
+                <div class="current-status">
+                    <div class="status-card">
+                        <h4>Status da Partida</h4>
+                        <p id="partnerStatus">Aguardando descrição do parceiro...</p>
+                        <p id="roundInfo">Rodada 1 de 4</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Visão do Adivinhador -->
+            <div id="identifierView" class="game-view hidden">
+                <div class="role-header">
+                    <h2>🔍 Você é o Adivinhador</h2>
+                    <p class="role-description">Escute as descrições e identifique o som correto</p>
+                </div>
+
+                <div class="description-section">
+                    <div class="partner-description-card">
+                        <h4>Descrição do Parceiro:</h4>
+                        <div id="partnerDescription" class="description-text">
+                            Aguardando descrição do ouvinte...
+                        </div>
+                    </div>
+                </div>
+
+                <div class="options-section">
+                    <h4>Selecione a opção correta:</h4>
+                    <div id="optionsContainer" class="options-grid">
+                        <div class="option-btn" data-option="0">
+                            <span class="option-text">Carregando opção 1...</span>
+                        </div>
+                        <div class="option-btn" data-option="1">
+                            <span class="option-text">Carregando opção 2...</span>
+                        </div>
+                        <div class="option-btn" data-option="2">
+                            <span class="option-text">Carregando opção 3...</span>
+                        </div>
+                        <div class="option-btn" data-option="3">
+                            <span class="option-text">Carregando opção 4...</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="action-buttons">
+                    <button id="submitAnswer" class="submit-btn" disabled>
+                        Confirmar Resposta
+                    </button>
+                </div>
+            </div>
+        </main>
+
+        <!-- Overlay de Fim de Jogo -->
+        <div id="gameOverOverlay" class="game-overlay">
+            <div class="game-result">
+                <h2>Fim de Jogo!</h2>
+                <div class="score-display">
+                    <p class="final-score">Pontuação Final: <span id="finalScore">0</span></p>
+                    <p class="rounds-completed">Rodadas Completas: <span id="roundsCompleted">0</span>/4</p>
+                    <p class="accuracy">Precisão: <span id="accuracyPercentage">0%</span></p>
+                </div>
+                <div class="result-actions">
+                    <button id="playAgainBtn" class="action-btn primary">
+                        Jogar Novamente
+                    </button>
+                    <button id="mainMenuBtn" class="action-btn secondary">
+                        Menu Principal
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Firebase SDK -->
+        <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+        <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-database-compat.js"></script>
+
+        <!-- Nossos scripts -->
+        <script src="scripts/firebase/config.js"></script>
+        <script src="scripts/firebase/database.js"></script>
+        <script src="scripts/util.js"></script>
+        <script src="scripts/jogo.js"></script>
+        <script src="scripts/perguntas.js"></script>
+        <script src="scripts/ouvinte.js"></script>
+        <script src="scripts/leitor.js"></script>
+</body>
+
+</html>

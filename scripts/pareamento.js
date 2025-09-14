@@ -1,30 +1,10 @@
 // Sistema de pareamento de jogadores para o BirdBox
-
 class MatchingSystem {
   constructor() {
     this.checkInterval = null;
-    this.checkDelay = 3000; // Verificar a cada 3 segundos
+    this.checkDelay = 3000;
   }
 
-  // Iniciar sistema de pareamento
-  startMatching() {
-    console.log("Sistema de pareamento iniciado");
-
-    this.checkInterval = setInterval(async () => {
-      await this.checkForMatches();
-    }, this.checkDelay);
-  }
-
-  // Parar sistema de pareamento
-  stopMatching() {
-    if (this.checkInterval) {
-      clearInterval(this.checkInterval);
-      this.checkInterval = null;
-      console.log("Sistema de pareamento parado");
-    }
-  }
-
-  // Verificar por matches possíveis
   async checkForMatches() {
     try {
       const queueSnapshot = await firebaseDB.queueRef.once("value");
@@ -42,6 +22,12 @@ class MatchingSystem {
         const player1Data = queue[player1Id];
         const player2Data = queue[player2Id];
 
+        console.log(
+          "Encontrados jogadores para parear:",
+          player1Data.nome,
+          player2Data.nome
+        );
+
         // Criar partida
         const gameId = await firebaseDB.createNewGame(
           player1Id,
@@ -57,8 +43,8 @@ class MatchingSystem {
           await firebaseDB.removePlayerFromQueue(player1Id);
           await firebaseDB.removePlayerFromQueue(player2Id);
 
-          // Aqui você pode enviar notificações para os jogadores
-          // ou redirecioná-los automaticamente
+          // Atualizar o gameId nos jogadores para redirecionamento
+          await this.updatePlayersWithGameId(player1Id, player2Id, gameId);
         }
       }
     } catch (error) {
@@ -66,29 +52,19 @@ class MatchingSystem {
     }
   }
 
-  // Verificar status de pareamento para um jogador específico
-  async checkPlayerStatus(playerId) {
+  async updatePlayersWithGameId(player1Id, player2Id, gameId) {
     try {
-      // Verificar se o jogador já está em uma partida
-      const gamesSnapshot = await firebaseDB.gamesRef
-        .orderByChild("status")
-        .equalTo("ativo")
-        .once("value");
-      const games = gamesSnapshot.val();
+      // Salvar o gameId em algum lugar para os jogadores acessarem
+      await firebaseDB.db
+        .ref(`birdbox/players/${player1Id}/currentGame`)
+        .set(gameId);
+      await firebaseDB.db
+        .ref(`birdbox/players/${player2Id}/currentGame`)
+        .set(gameId);
 
-      if (games) {
-        for (const gameId in games) {
-          const game = games[gameId];
-          if (game.jogadores && game.jogadores[playerId]) {
-            return { inGame: true, gameId: gameId };
-          }
-        }
-      }
-
-      return { inGame: false };
+      console.log("GameId salvo para os jogadores");
     } catch (error) {
-      console.error("Erro ao verificar status do jogador:", error);
-      return { inGame: false };
+      console.error("Erro ao salvar gameId:", error);
     }
   }
 }

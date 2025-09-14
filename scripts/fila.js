@@ -15,6 +15,10 @@ class QueueManager {
       return false;
     }
 
+    // Verificar se já está em um jogo ativo
+    const inGame = await this.checkAndRedirectToExistingGame();
+    if (inGame) return true;
+
     this.isLookingForMatch = true;
 
     // Adicionar jogador à fila
@@ -42,6 +46,34 @@ class QueueManager {
     }
 
     return await firebaseDB.removePlayerFromQueue(this.playerId);
+  }
+  async checkAndRedirectToExistingGame() {
+    try {
+      const gameSnapshot = await firebaseDB.db
+        .ref(`birdbox/players/${this.playerId}/currentGame`)
+        .once("value");
+      const gameId = gameSnapshot.val();
+
+      if (gameId) {
+        // Verificar se o jogo ainda está ativo
+        const gameSnapshot = await firebaseDB.db
+          .ref(`birdbox/games/${gameId}`)
+          .once("value");
+        const gameData = gameSnapshot.val();
+
+        if (gameData && gameData.status === "ativo") {
+          console.log(
+            "Jogador já está em uma partida ativa, redirecionando..."
+          );
+          window.location.href = `jogo.html?gameId=${gameId}`;
+          return true;
+        }
+      }
+      return false;
+    } catch (error) {
+      console.error("Erro ao verificar jogo existente:", error);
+      return false;
+    }
   }
 
   // Ouvir por possíveis matches
