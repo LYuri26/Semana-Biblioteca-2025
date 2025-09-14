@@ -21,7 +21,39 @@ class ListenerManager {
       });
     }
 
+    // Configurar botões de navegação
+    ListenerManager.setupNavigationButtons(gameManager);
+
     ListenerManager.updateInterface(1, gameManager.totalRounds);
+  }
+
+  // Configurar botões de navegação
+  static setupNavigationButtons(gameManager) {
+    const nextButton = document.getElementById("nextRound");
+    const prevButton = document.getElementById("prevRound");
+    const finishButton = document.getElementById("finishGame");
+
+    if (nextButton) {
+      nextButton.addEventListener("click", () => {
+        gameManager.advanceToNextRound();
+      });
+    }
+
+    if (prevButton) {
+      prevButton.addEventListener("click", () => {
+        if (gameManager.currentRound > 1) {
+          gameManager.currentRound--;
+          gameManager.updateRoundDisplay();
+          gameManager.loadQuestionForCurrentRound();
+        }
+      });
+    }
+
+    if (finishButton) {
+      finishButton.addEventListener("click", () => {
+        gameManager.playerFinishedGame();
+      });
+    }
   }
 
   // Preparar áudio
@@ -50,6 +82,9 @@ class ListenerManager {
 
       const playButton = document.getElementById("playSound");
       if (playButton) playButton.disabled = true;
+
+      const replayButton = document.getElementById("replaySound");
+      if (replayButton) replayButton.disabled = true;
     }
   }
 

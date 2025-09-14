@@ -21,6 +21,7 @@ class GameManager {
     this.descriptionListener = null;
     this.roundListener = null;
     this.questionListener = null;
+    this.playersListener = null;
   }
 
   // Inicializar o jogo
@@ -33,19 +34,14 @@ class GameManager {
       await this.determinePlayerRole();
       console.log("Papel do jogador determinado:", this.playerRole);
 
-      // Carregar perguntas
+      // Carregar perguntas (agora sem fallback)
       await this.loadQuestions();
 
-      // Iniciar interface conforme o papel
+      // Resto do código permanece igual...
       this.initializeUI();
-
-      // Configurar ouvintes do Firebase
       this.setupFirebaseListeners();
-
-      // Iniciar timer global
       this.startGameTimer();
 
-      // Se for o ouvinte, iniciar primeira pergunta
       if (this.playerRole === "ouvinte") {
         console.log("Ouvinte - preparando primeira pergunta");
         await firebaseDB.db
@@ -78,7 +74,9 @@ class GameManager {
       this.hideLoadingScreen();
     } catch (error) {
       console.error("Erro ao inicializar jogo:", error);
-      alert("Erro ao carregar o jogo. Tente novamente.");
+      alert(
+        "Erro ao carregar as perguntas. Verifique se o arquivo perguntas.json existe e está no formato correto."
+      );
       window.location.href = "index.html";
     }
   }
@@ -157,6 +155,7 @@ class GameManager {
     }
 
     this.setupCommonEventListeners();
+    this.setupAllButtons();
     this.updateTimerDisplay();
     this.updateRoundDisplay();
     this.updateScoreDisplay();
@@ -175,6 +174,44 @@ class GameManager {
     if (mainMenuBtn) {
       mainMenuBtn.addEventListener("click", () => {
         window.location.href = "index.html";
+      });
+    }
+  }
+
+  // Configurar todos os botões
+  setupAllButtons() {
+    // Botão de confirmar resposta (adivinhador)
+    const submitButton = document.getElementById("submitAnswer");
+    if (submitButton) {
+      submitButton.addEventListener("click", () => {
+        IdentifierManager.submitAnswer(this);
+      });
+    }
+
+    // Botões de navegação (ouvinte)
+    const nextButton = document.getElementById("nextRound");
+    const prevButton = document.getElementById("prevRound");
+    const finishButton = document.getElementById("finishGame");
+
+    if (nextButton) {
+      nextButton.addEventListener("click", () => {
+        this.advanceToNextRound();
+      });
+    }
+
+    if (prevButton) {
+      prevButton.addEventListener("click", () => {
+        if (this.currentRound > 1) {
+          this.currentRound--;
+          this.updateRoundDisplay();
+          this.loadQuestionForCurrentRound();
+        }
+      });
+    }
+
+    if (finishButton) {
+      finishButton.addEventListener("click", () => {
+        this.playerFinishedGame();
       });
     }
   }
@@ -223,6 +260,13 @@ class GameManager {
           }
         });
     }
+
+    // Listener para verificar se ambos finalizaram
+    this.playersListener = firebaseDB.db
+      .ref(`birdbox/games/${this.gameId}/jogadores`)
+      .on("value", (snapshot) => {
+        this.checkIfBothPlayersFinished(snapshot.val());
+      });
   }
 
   // Atualizar estado do jogo
@@ -288,6 +332,29 @@ class GameManager {
     }
   }
 
+  // Carregar pergunta da rodada atual
+  async loadQuestionForCurrentRound() {
+    if (this.currentRound <= this.totalRounds) {
+      this.currentQuestion = this.selectedQuestions[this.currentRound - 1];
+
+      await firebaseDB.db
+        .ref(`birdbox/games/${this.gameId}/currentQuestion`)
+        .set(this.currentQuestion.id);
+
+      const preparedOptions = QuestionManager.prepareQuestionOptions(
+        this.currentQuestion,
+        this.wrongOptionsPool
+      );
+      this.currentQuestion.displayOptions = preparedOptions.options;
+      this.currentQuestion.correctDisplayIndex = preparedOptions.correctIndex;
+
+      if (this.playerRole === "ouvinte") {
+        ListenerManager.prepareAudio(this.currentQuestion);
+        ListenerManager.updateInterface(this.currentRound, this.totalRounds);
+      }
+    }
+  }
+
   // Avançar para próxima rodada
   async advanceToNextRound() {
     this.currentRound++;
@@ -303,6 +370,53 @@ class GameManager {
     } else {
       IdentifierManager.resetAnswerInterface();
       this.updateRoundDisplay();
+    }
+  }
+
+  // Quando um jogador finaliza
+  async playerFinishedGame() {
+    try {
+      await firebaseDB.db
+        .ref(
+          `birdbox/games/${this.gameId}/jogadores/${this.playerId}/finalizado`
+        )
+        .set(true);
+
+      this.showWaitingMessage();
+    } catch (error) {
+      console.error("Erro ao marcar jogo como finalizado:", error);
+    }
+  }
+
+  // Verificar se ambos finalizaram
+  async checkIfBothPlayersFinished(playersData) {
+    if (!playersData) return;
+
+    let allFinished = true;
+
+    Object.keys(playersData).forEach((playerId) => {
+      if (!playersData[playerId].finalizado) {
+        allFinished = false;
+      }
+    });
+
+    if (allFinished) {
+      await this.endGame();
+    }
+  }
+
+  // Mostrar mensagem de espera
+  showWaitingMessage() {
+    if (this.playerRole === "ouvinte") {
+      const statusElement = document.getElementById("partnerStatus");
+      if (statusElement) {
+        statusElement.textContent = "Aguardando adivinhador finalizar...";
+      }
+    } else {
+      const descElement = document.getElementById("partnerDescription");
+      if (descElement) {
+        descElement.textContent = "Aguardando ouvinte finalizar...";
+      }
     }
   }
 
@@ -427,6 +541,11 @@ class GameManager {
       firebaseDB.db
         .ref(`birdbox/games/${this.gameId}/currentQuestion`)
         .off("value", this.questionListener);
+    }
+    if (this.playersListener) {
+      firebaseDB.db
+        .ref(`birdbox/games/${this.gameId}/jogadores`)
+        .off("value", this.playersListener);
     }
 
     window.location.reload();

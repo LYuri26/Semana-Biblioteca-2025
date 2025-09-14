@@ -4,6 +4,7 @@ class IdentifierManager {
   static setupUI(gameManager) {
     const options = document.querySelectorAll(".option-btn");
     const submitButton = document.getElementById("submitAnswer");
+    const finishButton = document.getElementById("finishGame");
 
     if (options && submitButton) {
       options.forEach((option) => {
@@ -18,6 +19,12 @@ class IdentifierManager {
         IdentifierManager.submitAnswer(gameManager);
       });
       submitButton.disabled = true;
+    }
+
+    if (finishButton) {
+      finishButton.addEventListener("click", () => {
+        gameManager.playerFinishedGame();
+      });
     }
 
     const descElement = document.getElementById("partnerDescription");
@@ -66,6 +73,8 @@ class IdentifierManager {
 
   // Selecionar opção
   static selectOption(optionElement) {
+    if (optionElement.classList.contains("disabled")) return;
+
     const previouslySelected = document.querySelector(".option-btn.selected");
     if (previouslySelected) {
       previouslySelected.classList.remove("selected");
@@ -96,15 +105,21 @@ class IdentifierManager {
           `birdbox/games/${gameManager.gameId}/jogadores/${gameManager.playerId}/pontuacao`
         )
         .set(gameManager.score);
-
-      IdentifierManager.showAnswerFeedback(true, gameManager.currentQuestion);
-    } else {
-      IdentifierManager.showAnswerFeedback(false, gameManager.currentQuestion);
     }
 
-    setTimeout(() => {
-      gameManager.advanceToNextRound();
-    }, 2000);
+    IdentifierManager.showAnswerFeedback(
+      isCorrect,
+      gameManager.currentQuestion
+    );
+
+    // Desabilitar novas seleções após responder
+    const options = document.querySelectorAll(".option-btn");
+    options.forEach((option) => {
+      option.classList.add("disabled");
+    });
+
+    const submitButton = document.getElementById("submitAnswer");
+    if (submitButton) submitButton.disabled = true;
   }
 
   // Calcular pontos
