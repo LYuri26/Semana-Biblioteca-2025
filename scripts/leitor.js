@@ -90,60 +90,48 @@ class IdentifierManager {
       return;
     }
 
-    const isCorrect =
-      window.selectedOption === gameManager.currentQuestion.correctDisplayIndex;
+    try {
+      // Verifica se está correta
+      const isCorrect =
+        window.selectedOption ===
+        gameManager.currentQuestion.correctDisplayIndex;
 
-    if (isCorrect) {
-      const points = IdentifierManager.calculatePoints(
-        gameManager.currentQuestion
-      );
-      gameManager.score += points;
-      gameManager.updateScoreDisplay();
+      // Atualiza pontuação
+      if (isCorrect) {
+        const points = IdentifierManager.calculatePoints(
+          gameManager.currentQuestion
+        );
+        gameManager.score += points;
+        gameManager.updateScoreDisplay();
 
-      await firebaseDB.db
-        .ref(
-          `birdbox/games/${gameManager.gameId}/jogadores/${gameManager.playerId}/pontuacao`
-        )
-        .set(gameManager.score);
+        await firebaseDB.db
+          .ref(
+            `birdbox/games/${gameManager.gameId}/jogadores/${gameManager.playerId}/pontuacao`
+          )
+          .set(gameManager.score);
+      }
+
+      // Desabilita opções após responder
+      const options = document.querySelectorAll(".option-btn");
+      options.forEach((option) => {
+        option.classList.add("disabled");
+      });
+
+      const submitButton = document.getElementById("submitAnswer");
+      if (submitButton) submitButton.disabled = true;
+
+      // Avança para a próxima rodada (sem mostrar resposta)
+      gameManager.advanceToNextRound();
+    } catch (error) {
+      console.error("Erro ao enviar resposta:", error);
     }
-
-    IdentifierManager.showAnswerFeedback(
-      isCorrect,
-      gameManager.currentQuestion
-    );
-
-    // Desabilitar novas seleções após responder
-    const options = document.querySelectorAll(".option-btn");
-    options.forEach((option) => {
-      option.classList.add("disabled");
-    });
-
-    const submitButton = document.getElementById("submitAnswer");
-    if (submitButton) submitButton.disabled = true;
   }
 
   // Calcular pontos
   static calculatePoints(question) {
     const basePoints = 100;
-    const difficultyMultiplier = question.dificuldade;
+    const difficultyMultiplier = question.dificuldade || 1;
     return basePoints * difficultyMultiplier;
-  }
-
-  // Mostrar feedback visual
-  static showAnswerFeedback(isCorrect, question) {
-    const options = document.querySelectorAll(".option-btn");
-    options.forEach((option) => {
-      const optionIndex = parseInt(option.dataset.option);
-      if (optionIndex === question.correctDisplayIndex) {
-        option.classList.add("correct");
-      } else if (optionIndex === window.selectedOption && !isCorrect) {
-        option.classList.add("incorrect");
-      }
-      option.classList.add("disabled");
-    });
-
-    const submitButton = document.getElementById("submitAnswer");
-    if (submitButton) submitButton.disabled = true;
   }
 
   // Resetar interface

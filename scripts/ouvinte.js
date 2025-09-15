@@ -24,7 +24,10 @@ class ListenerManager {
     // Configurar botões de navegação
     ListenerManager.setupNavigationButtons(gameManager);
 
-    ListenerManager.updateInterface(1, gameManager.totalRounds);
+    ListenerManager.updateInterface(
+      gameManager.currentRound,
+      gameManager.totalRounds
+    );
   }
 
   // Configurar botões de navegação
@@ -36,6 +39,10 @@ class ListenerManager {
     if (nextButton) {
       nextButton.addEventListener("click", () => {
         gameManager.advanceToNextRound();
+        ListenerManager.updateInterface(
+          gameManager.currentRound,
+          gameManager.totalRounds
+        );
       });
     }
 
@@ -45,6 +52,10 @@ class ListenerManager {
           gameManager.currentRound--;
           gameManager.updateRoundDisplay();
           gameManager.loadQuestionForCurrentRound();
+          ListenerManager.updateInterface(
+            gameManager.currentRound,
+            gameManager.totalRounds
+          );
         }
       });
     }
@@ -102,7 +113,7 @@ class ListenerManager {
   }
 
   // Simular descrição (para teste)
-  static simulateDescription(question) {
+  static simulateDescription(gameManager, question) {
     if (question) {
       const description = question.descricao;
       firebaseDB.db

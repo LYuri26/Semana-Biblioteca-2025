@@ -294,8 +294,10 @@ class GameManager {
   // Carregar próxima pergunta
   async loadNextQuestion() {
     if (this.currentRound > this.totalRounds) {
-      this.endGame();
-      return;
+      // Se já passou do total, mantém na última rodada
+      this.currentRound = this.totalRounds;
+      this.updateRoundDisplay();
+      return; // não finaliza aqui
     }
 
     this.currentQuestion = this.selectedQuestions[this.currentRound - 1];
@@ -363,18 +365,24 @@ class GameManager {
 
   // Avançar para próxima rodada
   async advanceToNextRound() {
-    this.currentRound++;
-    await firebaseDB.db
-      .ref(`birdbox/games/${this.gameId}/currentRound`)
-      .set(this.currentRound);
-
-    if (this.playerRole === "ouvinte") {
+    if (this.currentRound < this.totalRounds) {
+      this.currentRound++;
       await firebaseDB.db
-        .ref(`birdbox/games/${this.gameId}/currentDescription`)
-        .set(null);
-      await this.loadNextQuestion();
+        .ref(`birdbox/games/${this.gameId}/currentRound`)
+        .set(this.currentRound);
+
+      if (this.playerRole === "ouvinte") {
+        await firebaseDB.db
+          .ref(`birdbox/games/${this.gameId}/currentDescription`)
+          .set(null);
+        await this.loadNextQuestion();
+      } else {
+        IdentifierManager.resetAnswerInterface();
+        this.updateRoundDisplay();
+      }
     } else {
-      IdentifierManager.resetAnswerInterface();
+      // Se já está na última, apenas atualiza tela, não encerra
+      this.currentRound = this.totalRounds;
       this.updateRoundDisplay();
     }
   }
@@ -565,35 +573,44 @@ class GameManager {
 }
 
 function updateRoundDisplay() {
-  document.getElementById("roundNumber").textContent = `${
-    currentRound + 1
-  }/${totalRounds}`;
-  document.getElementById("currentRound").textContent = `${
-    currentRound + 1
-  }/${totalRounds}`;
+  const roundNumber = document.getElementById("roundNumber");
+  const currentRoundEl = document.getElementById("currentRound");
+
+  if (roundNumber) {
+    roundNumber.textContent = `${gameManager.currentRound}/${gameManager.totalRounds}`;
+  }
+  if (currentRoundEl) {
+    currentRoundEl.textContent = `${gameManager.currentRound}/${gameManager.totalRounds}`;
+  }
 }
 
 // Botão Anterior
-document.getElementById("prevRound").addEventListener("click", () => {
-  if (currentRound > 0) {
-    currentRound--;
-    updateRoundDisplay();
-  }
-});
+const prevBtn = document.getElementById("prevRound");
+if (prevBtn) {
+  prevBtn.addEventListener("click", () => {
+    if (gameManager.currentRound > 1) {
+      gameManager.currentRound--;
+      gameManager.loadQuestionForCurrentRound();
+      updateRoundDisplay();
+    }
+  });
+}
 
 // Botão Próxima
-document.getElementById("nextRound").addEventListener("click", () => {
-  if (currentRound < totalRounds - 1) {
-    currentRound++;
+const nextBtn = document.getElementById("nextRound");
+if (nextBtn) {
+  nextBtn.addEventListener("click", () => {
+    gameManager.advanceToNextRound();
     updateRoundDisplay();
-  }
-});
+  });
+}
 
 // Seleção de opções (habilita Confirmar)
 document.querySelectorAll(".option-btn").forEach((btn) => {
   btn.addEventListener("click", () => {
-    selectedOption = btn.dataset.option;
-    document.getElementById("submitAnswer").disabled = false;
+    gameManager.selectedOption = btn.dataset.option;
+    const submitBtn = document.getElementById("submitAnswer");
+    if (submitBtn) submitBtn.disabled = false;
 
     // Destaque visual
     document
@@ -606,19 +623,22 @@ document.querySelectorAll(".option-btn").forEach((btn) => {
 });
 
 // Confirmar Resposta
-document.getElementById("submitAnswer").addEventListener("click", () => {
-  if (selectedOption !== null) {
-    enviarResposta(currentRound, selectedOption); // função que já deve existir no fluxo
-    document.getElementById("submitAnswer").disabled = true;
-    selectedOption = null;
-    resetInactivityTimer();
-  }
-});
+const submitBtn = document.getElementById("submitAnswer");
+if (submitBtn) {
+  submitBtn.addEventListener("click", () => {
+    if (gameManager.selectedOption !== null) {
+      IdentifierManager.submitAnswer(gameManager); // chama lógica central
+      submitBtn.disabled = true;
+      gameManager.selectedOption = null;
+      resetInactivityTimer();
+    }
+  });
+}
 
 // Finalizar jogo manualmente
 document.querySelectorAll("#finishGame").forEach((btn) => {
   btn.addEventListener("click", () => {
-    finalizarJogo();
+    gameManager.playerFinishedGame(); // usa método da classe
   });
 });
 
@@ -626,8 +646,8 @@ document.querySelectorAll("#finishGame").forEach((btn) => {
 function resetInactivityTimer() {
   if (inactivityTimer) clearTimeout(inactivityTimer);
   inactivityTimer = setTimeout(() => {
-    finalizarJogo();
-  }, 3 * 60 * 1000); // 3 minutos
+    gameManager.playerFinishedGame(); // só marca jogador como finalizado
+  }, 3 * 60 * 1000);
 }
 
 // Instância global do gerenciador de jogo
