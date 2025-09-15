@@ -85,18 +85,16 @@ class IdentifierManager {
 
   // Submeter resposta
   static async submitAnswer(gameManager) {
-    if (window.selectedOption === null || window.selectedOption === undefined) {
+    if (window.selectedOption === null) {
       alert("Selecione uma opção antes de confirmar.");
       return;
     }
 
     try {
-      // Verifica se está correta
       const isCorrect =
         window.selectedOption ===
         gameManager.currentQuestion.correctDisplayIndex;
 
-      // Atualiza pontuação
       if (isCorrect) {
         const points = IdentifierManager.calculatePoints(
           gameManager.currentQuestion
@@ -112,15 +110,14 @@ class IdentifierManager {
       }
 
       // Desabilita opções após responder
-      const options = document.querySelectorAll(".option-btn");
-      options.forEach((option) => {
-        option.classList.add("disabled");
-      });
+      document
+        .querySelectorAll(".option-btn")
+        .forEach((option) => option.classList.add("disabled"));
 
       const submitButton = document.getElementById("submitAnswer");
       if (submitButton) submitButton.disabled = true;
 
-      // Avança para a próxima rodada (sem mostrar resposta)
+      // Avança **somente o próprio jogador**
       gameManager.advanceToNextRound();
     } catch (error) {
       console.error("Erro ao enviar resposta:", error);

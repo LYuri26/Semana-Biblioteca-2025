@@ -4,6 +4,7 @@ let currentRound = 0;
 const totalRounds = 4;
 let selectedOption = null;
 let inactivityTimer = null;
+this.isAdvancing = false; // novo flag
 
 class GameManager {
   constructor() {
@@ -28,6 +29,30 @@ class GameManager {
     this.roundListener = null;
     this.questionListener = null;
     this.playersListener = null;
+  }
+
+  async checkAndAdvanceRound() {
+    const snapshot = await firebaseDB.db
+      .ref(`birdbox/games/${this.gameId}/jogadores`)
+      .once("value");
+
+    const players = snapshot.val();
+    let allReady = true;
+
+    Object.keys(players).forEach((id) => {
+      if (!players[id].readyForNextRound) allReady = false;
+    });
+
+    if (allReady) {
+      // Resetar flag
+      Object.keys(players).forEach(async (id) => {
+        await firebaseDB.db
+          .ref(`birdbox/games/${this.gameId}/jogadores/${id}/readyForNextRound`)
+          .set(false);
+      });
+
+      this.advanceToNextRound();
+    }
   }
 
   // Inicializar o jogo
@@ -271,6 +296,7 @@ class GameManager {
     this.playersListener = firebaseDB.db
       .ref(`birdbox/games/${this.gameId}/jogadores`)
       .on("value", (snapshot) => {
+        this.checkAndAdvanceRound(); // Avança só se ambos estiverem prontos
         this.checkIfBothPlayersFinished(snapshot.val());
       });
   }
@@ -363,8 +389,10 @@ class GameManager {
     }
   }
 
-  // Avançar para próxima rodada
   async advanceToNextRound() {
+    if (this.isAdvancing) return; // evita múltiplos cliques
+    this.isAdvancing = true;
+
     if (this.currentRound < this.totalRounds) {
       this.currentRound++;
       await firebaseDB.db
@@ -381,10 +409,14 @@ class GameManager {
         this.updateRoundDisplay();
       }
     } else {
-      // Se já está na última, apenas atualiza tela, não encerra
       this.currentRound = this.totalRounds;
       this.updateRoundDisplay();
     }
+
+    // Pequeno delay para evitar duplo clique
+    setTimeout(() => {
+      this.isAdvancing = false;
+    }, 100);
   }
 
   // Quando um jogador finaliza
@@ -406,16 +438,10 @@ class GameManager {
   async checkIfBothPlayersFinished(playersData) {
     if (!playersData) return;
 
-    let allFinished = true;
-
-    Object.keys(playersData).forEach((playerId) => {
-      if (!playersData[playerId].finalizado) {
-        allFinished = false;
-      }
-    });
+    const allFinished = Object.values(playersData).every((p) => p.finalizado);
 
     if (allFinished) {
-      await this.endGame();
+      await this.endGame(); // só termina quando ambos finalizam
     }
   }
 
@@ -468,10 +494,18 @@ class GameManager {
 
   // Atualizar display da rodada
   updateRoundDisplay() {
-    const roundElement = document.getElementById("currentRound");
-    if (roundElement) {
-      roundElement.textContent = `${this.currentRound}/${this.totalRounds}`;
-    }
+    const roundEl = document.getElementById("currentRound");
+    const roundNumber = document.getElementById("roundNumber");
+    if (roundEl)
+      roundEl.textContent = `${this.currentRound}/${this.totalRounds}`;
+    if (roundNumber)
+      roundNumber.textContent = `${this.currentRound}/${this.totalRounds}`;
+
+    const prevBtn = document.getElementById("prevRound");
+    if (prevBtn) prevBtn.disabled = this.currentRound <= 1;
+
+    const nextBtn = document.getElementById("nextRound");
+    if (nextBtn) nextBtn.disabled = this.currentRound >= this.totalRounds;
   }
 
   // Atualizar display da pontuação
@@ -582,27 +616,6 @@ function updateRoundDisplay() {
   if (currentRoundEl) {
     currentRoundEl.textContent = `${gameManager.currentRound}/${gameManager.totalRounds}`;
   }
-}
-
-// Botão Anterior
-const prevBtn = document.getElementById("prevRound");
-if (prevBtn) {
-  prevBtn.addEventListener("click", () => {
-    if (gameManager.currentRound > 1) {
-      gameManager.currentRound--;
-      gameManager.loadQuestionForCurrentRound();
-      updateRoundDisplay();
-    }
-  });
-}
-
-// Botão Próxima
-const nextBtn = document.getElementById("nextRound");
-if (nextBtn) {
-  nextBtn.addEventListener("click", () => {
-    gameManager.advanceToNextRound();
-    updateRoundDisplay();
-  });
 }
 
 // Seleção de opções (habilita Confirmar)
