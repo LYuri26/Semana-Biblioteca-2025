@@ -1,4 +1,10 @@
 // Gerenciador principal do jogo BirdBox
+// Variáveis de controle
+let currentRound = 0;
+const totalRounds = 4;
+let selectedOption = null;
+let inactivityTimer = null;
+
 class GameManager {
   constructor() {
     this.gameId = null;
@@ -556,6 +562,72 @@ class GameManager {
     const loadingOverlay = document.getElementById("loadingOverlay");
     if (loadingOverlay) loadingOverlay.classList.remove("active");
   }
+}
+
+function updateRoundDisplay() {
+  document.getElementById("roundNumber").textContent = `${
+    currentRound + 1
+  }/${totalRounds}`;
+  document.getElementById("currentRound").textContent = `${
+    currentRound + 1
+  }/${totalRounds}`;
+}
+
+// Botão Anterior
+document.getElementById("prevRound").addEventListener("click", () => {
+  if (currentRound > 0) {
+    currentRound--;
+    updateRoundDisplay();
+  }
+});
+
+// Botão Próxima
+document.getElementById("nextRound").addEventListener("click", () => {
+  if (currentRound < totalRounds - 1) {
+    currentRound++;
+    updateRoundDisplay();
+  }
+});
+
+// Seleção de opções (habilita Confirmar)
+document.querySelectorAll(".option-btn").forEach((btn) => {
+  btn.addEventListener("click", () => {
+    selectedOption = btn.dataset.option;
+    document.getElementById("submitAnswer").disabled = false;
+
+    // Destaque visual
+    document
+      .querySelectorAll(".option-btn")
+      .forEach((b) => b.classList.remove("selected"));
+    btn.classList.add("selected");
+
+    resetInactivityTimer();
+  });
+});
+
+// Confirmar Resposta
+document.getElementById("submitAnswer").addEventListener("click", () => {
+  if (selectedOption !== null) {
+    enviarResposta(currentRound, selectedOption); // função que já deve existir no fluxo
+    document.getElementById("submitAnswer").disabled = true;
+    selectedOption = null;
+    resetInactivityTimer();
+  }
+});
+
+// Finalizar jogo manualmente
+document.querySelectorAll("#finishGame").forEach((btn) => {
+  btn.addEventListener("click", () => {
+    finalizarJogo();
+  });
+});
+
+// Encerramento automático por inatividade (3 min)
+function resetInactivityTimer() {
+  if (inactivityTimer) clearTimeout(inactivityTimer);
+  inactivityTimer = setTimeout(() => {
+    finalizarJogo();
+  }, 3 * 60 * 1000); // 3 minutos
 }
 
 // Instância global do gerenciador de jogo
