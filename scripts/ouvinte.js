@@ -38,16 +38,22 @@ class ListenerManager {
 
     if (nextButton) {
       nextButton.addEventListener("click", () => {
-        gameManager.advanceToNextRound();
-        ListenerManager.updateInterface(
-          gameManager.currentRound,
-          gameManager.totalRounds
-        );
+        // AVANÇA APENAS LOCALMENTE - NÃO SINCRONIZA COM FIREBASE
+        if (gameManager.currentRound < gameManager.totalRounds) {
+          gameManager.currentRound++;
+          gameManager.updateRoundDisplay();
+          gameManager.loadQuestionForCurrentRound();
+          ListenerManager.updateInterface(
+            gameManager.currentRound,
+            gameManager.totalRounds
+          );
+        }
       });
     }
 
     if (prevButton) {
       prevButton.addEventListener("click", () => {
+        // VOLTA APENAS LOCALMENTE - NÃO SINCRONIZA COM FIREBASE
         if (gameManager.currentRound > 1) {
           gameManager.currentRound--;
           gameManager.updateRoundDisplay();
@@ -66,7 +72,6 @@ class ListenerManager {
       });
     }
   }
-
   // Preparar áudio
   static prepareAudio(question) {
     const audioPlayer = document.getElementById("soundPlayer");

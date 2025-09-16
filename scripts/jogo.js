@@ -203,36 +203,22 @@ class GameManager {
       });
     }
 
-    // Botões de navegação (ouvinte)
+    // Botões de navegação (ouvinte) - REMOVIDA A SINCRONIZAÇÃO COM FIREBASE
     const nextButton = document.getElementById("nextRound");
     const prevButton = document.getElementById("prevRound");
     const finishButton = document.getElementById("finishGame");
 
-    nextButton.addEventListener("click", async () => {
-      if (this.currentRound < this.totalRounds) {
-        this.currentRound++;
-        await firebaseDB.db
-          .ref(
-            `birdbox/games/${this.gameId}/jogadores/${this.playerId}/currentRound`
-          )
-          .set(this.currentRound);
+    if (nextButton) {
+      nextButton.addEventListener("click", () => {
+        // Apenas avança localmente - listener já cuida disso
+      });
+    }
 
-        await this.loadQuestionForCurrentRound(); // garante pergunta sincronizada
-      }
-    });
-
-    prevButton.addEventListener("click", async () => {
-      if (this.currentRound > 1) {
-        this.currentRound--;
-        await firebaseDB.db
-          .ref(
-            `birdbox/games/${this.gameId}/jogadores/${this.playerId}/currentRound`
-          )
-          .set(this.currentRound);
-
-        await this.loadQuestionForCurrentRound();
-      }
-    });
+    if (prevButton) {
+      prevButton.addEventListener("click", () => {
+        // Apenas volta localmente - listener já cuida disso
+      });
+    }
 
     if (finishButton) {
       finishButton.addEventListener("click", () => {
@@ -260,28 +246,22 @@ class GameManager {
             await this.loadQuestionForIdentifier(questionId);
           }
         });
-    }
 
-    this.roundListener = firebaseDB.db
-      .ref(
-        `birdbox/games/${this.gameId}/jogadores/${this.playerId}/currentRound`
-      )
-      .on("value", (snapshot) => {
-        const round = snapshot.val();
-        if (round && round !== this.currentRound) {
-          this.currentRound = round;
-          this.updateRoundDisplay();
-
-          if (this.playerRole === "adivinhador") {
+      // APENAS O ADIVINHADOR SINCRONIZA RODADA COM FIREBASE
+      this.roundListener = firebaseDB.db
+        .ref(`birdbox/games/${this.gameId}/currentRound`)
+        .on("value", (snapshot) => {
+          const round = snapshot.val();
+          if (round && round !== this.currentRound) {
+            this.currentRound = round;
+            this.updateRoundDisplay();
             IdentifierManager.resetAnswerInterface();
-          } else if (this.playerRole === "ouvinte") {
-            ListenerManager.updateInterface(
-              this.currentRound,
-              this.totalRounds
-            );
           }
-        }
-      });
+        });
+    } else {
+      // OUVINTE NÃO SINCRONIZA RODADA - NAVEGAÇÃO É INDEPENDENTE
+      console.log("Ouvinte: navegação local independente habilitada");
+    }
 
     // Listener para verificar se ambos finalizaram
     this.playersListener = firebaseDB.db
@@ -362,9 +342,12 @@ class GameManager {
     if (this.currentRound <= this.totalRounds) {
       this.currentQuestion = this.selectedQuestions[this.currentRound - 1];
 
-      await firebaseDB.db
-        .ref(`birdbox/games/${this.gameId}/currentQuestion`)
-        .set(this.currentQuestion.id);
+      // APENAS O OUVINTE ATUALIZA A PERGUNTA NO FIREBASE
+      if (this.playerRole === "ouvinte") {
+        await firebaseDB.db
+          .ref(`birdbox/games/${this.gameId}/currentQuestion`)
+          .set(this.currentQuestion.id);
+      }
 
       const preparedOptions = QuestionManager.prepareQuestionOptions(
         this.currentQuestion,
@@ -384,27 +367,20 @@ class GameManager {
     if (this.isAdvancing) return;
     this.isAdvancing = true;
 
-    if (this.currentRound < this.totalRounds) {
-      this.currentRound++;
-      await firebaseDB.db
-        .ref(
-          `birdbox/games/${this.gameId}/jogadores/${this.playerId}/currentRound`
-        )
-        .set(this.currentRound);
-
-      if (this.playerRole === "ouvinte") {
+    // APENAS O ADIVINHADOR AVANÇA ATRAVÉS DESTE MÉTODO
+    if (this.playerRole === "adivinhador") {
+      if (this.currentRound < this.totalRounds) {
+        this.currentRound++;
         await firebaseDB.db
-          .ref(`birdbox/games/${this.gameId}/currentDescription`)
-          .set(null);
-        // Não carregar nova pergunta, apenas atualizar interface
-        ListenerManager.updateInterface(this.currentRound, this.totalRounds);
-      } else {
+          .ref(`birdbox/games/${this.gameId}/currentRound`)
+          .set(this.currentRound);
+
+        this.updateRoundDisplay();
         IdentifierManager.resetAnswerInterface();
+      } else {
+        this.currentRound = this.totalRounds;
         this.updateRoundDisplay();
       }
-    } else {
-      this.currentRound = this.totalRounds;
-      this.updateRoundDisplay();
     }
 
     setTimeout(() => {
