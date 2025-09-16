@@ -343,7 +343,7 @@ class GameManager {
   // Carregar pergunta da rodada atual
   async loadQuestionForCurrentRound() {
     if (this.currentRound <= this.totalRounds) {
-      this.currentQuestion = this.selectedQuestions[this.currentRound - 1];
+      [this.currentRound - 1];
 
       // APENAS O OUVINTE ATUALIZA A PERGUNTA NO FIREBASE
       if (this.playerRole === "ouvinte") {
