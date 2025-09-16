@@ -4,7 +4,7 @@ class IdentifierManager {
   static setupUI(gameManager) {
     const options = document.querySelectorAll(".option-btn");
     const submitButton = document.getElementById("submitAnswer");
-    const finishButton = document.getElementById("finishGame");
+    const finishButton = document.getElementById("finishGameIdentifier");
 
     if (options && submitButton) {
       options.forEach((option) => {

@@ -34,7 +34,7 @@ class ListenerManager {
   static setupNavigationButtons(gameManager) {
     const nextButton = document.getElementById("nextRound");
     const prevButton = document.getElementById("prevRound");
-    const finishButton = document.getElementById("finishGame");
+    const finishButton = document.getElementById("finishGameListener");
 
     if (nextButton) {
       nextButton.addEventListener("click", () => {
