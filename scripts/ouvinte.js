@@ -76,7 +76,7 @@ class ListenerManager {
   static prepareAudio(question) {
     const audioPlayer = document.getElementById("soundPlayer");
     if (audioPlayer && question) {
-      const soundPath = `../arquivos/sons/${question.som}`;
+      const soundPath = `arquivos/sons/${question.som}`;
       audioPlayer.src = soundPath;
 
       const playButton = document.getElementById("playSound");
