@@ -1,277 +1,207 @@
-# BirdBox Jogo 🎮👂🕹️
+# 🎮 BirdBox Jogo - Experiência Multiplayer de Sons
 
-Projeto multiplayer inspirado no livro **Bird Box**, desenvolvido em **HTML, CSS (Bootstrap) e JavaScript puro** com integração ao **Firebase Realtime Database**. O jogo desafia jogadores a cooperarem usando apenas a audição e a comunicação verbal.
+![Status](https://img.shields.io/badge/Status-Pronto%20para%20Jogar-brightgreen)
+![Multiplayer](https://img.shields.io/badge/Multiplayer-Tempo%20Real-blue)
+![Tecnologia](https://img.shields.io/badge/Plataforma-Web%20%2B%20Mobile-orange)
+![Acessibilidade](https://img.shields.io/badge/Acessibilidade-Foco%20Auditivo-yellow)
 
-## 🎯 Conceito do Jogo
+## 🌟 Visão Geral
 
-Em um mundo onde os jogadores não podem ver, a cooperação através da audição torna-se essencial:
+**BirdBox Jogo** é uma experiência multiplayer inovadora inspirada no universo do livro "Bird Box", onde jogadores devem confiar apenas em sua audição e habilidades de comunicação para cooperarem e vencerem desafios sonoros.
 
-- **Um jogador** ouve sons ambientes e os descreve verbalmente
-- **O outro jogador** recebe as descrições e deve identificar a fonte sonora correta
-- **Formação aleatória de duplas** - o sistema emparelha jogadores automaticamente
+## 🎯 Como Funciona
 
-## 📁 Estrutura de Diretórios Atualizada
+### 👥 Mecânica de Jogo
+
+- **🤝 Pareamento Automático**: Sistema inteligente conecta jogadores em tempo real
+- **🎭 Duas Funções**:
+  - **🎧 O Descritor**: Ouve sons ambientes e os descreve verbalmente
+  - **🎯 O Adivinhador**: Interpreta as descrições e identifica a fonte sonora
+- **⏱️ Rodadas Cronometradas**: Desafios dinâmicos com tempo limitado
+
+## 🛠️ Tecnologias Utilizadas
+
+- **Frontend**: HTML5, CSS3 (Bootstrap 5), JavaScript ES6+
+- **Backend**: Firebase Realtime Database
+- **Áudio**: Web Audio API
+- **Design**: Interface responsiva e acessível
+- **Storage**: LocalStorage para persistência de sessão
+
+## 📦 Estrutura do Projeto
 
 ```
-birdbox-jogo/
-├── publico/                         # Público principal
-│   ├── index.html                   # Página inicial - entrada do jogador
-│   ├── espera.html                  # Sala de espera por parceiro
-│   ├── jogo.html                    # Tela principal do jogo
-│   ├── estilos/                     # Estilos CSS organizados
-│   │   ├── principal.css            # Estilos globais e utilitários
-│   │   ├── index.css                # Estilos específicos da página inicial
-│   │   ├── espera.css               # Estilos da sala de espera
-│   │   └── jogo.css                 # Estilos da tela de jogo
-│   ├── scripts/                     # Lógica JavaScript organizada
-│   │   ├── firebase/                # Integração com Firebase
-│   │   │   ├── config.js            # Configuração do Firebase
-│   │   │   └── database.js          # Operações de banco de dados
-│   │   ├── nome.js                  # Gerenciamento de nome do jogador
-│   │   ├── fila.js                  # Sistema de fila de espera
-│   │   ├── pareamento.js            # Lógica de formação de duplas
-│   │   ├── jogo.js                  # Funcionalidades principais do jogo
-│   │   ├── audio.js                 # Controle de reprodução de áudio
-│   │   ├── util.js                  # Funções utilitárias
-│   │   └── espera.js                # Script específico da sala de espera
-│   └── arquivos/                    # Arquivos de mídia e dados
-│       ├── sons/                    # Biblioteca de sons ambientes
-│       │   ├── ambiente/
-│       │   │   ├── floresta.mp3
-│       │   │   ├── cidade.mp3
-│       │   │   ├── rio.mp3
-│       │   │   ├── tempestade.mp3
-│       │   │   └── vento.mp3
-│       │   └── efeitos/
-│       │       ├── correto.mp3
-│       │       ├── erro.mp3
-│       │       ├── match.mp3
-│       │       └── fim-jogo.mp3
-│       ├── imagens/                 # Assets visuais
-│       │   ├── icones/
-│       │   │   ├── som-ativo.svg
-│       │   │   ├── som-mudo.svg
-│       │   │   ├── vendado.svg
-│       │   │   └── fones.svg
-│       │   └── fundos/
-│       │       ├── bg-inicio.jpg
-│       │       ├── bg-espera.jpg
-│       │       ├── bg-jogo.jpg
-│       │       └── overlay.png
-│       └── dados/
-│           └── perguntas.json       # Banco de perguntas local (backup)
-├── LEIAME.md                        # Este arquivo
-└── .gitignore                       # Arquivos ignorados pelo Git
+Semana-Biblioteca-2025/
+├── 🎪 Páginas Principais
+│   ├── index.html          # Portal de entrada
+│   ├── espera.html         # Sala de espera
+│   └── jogo.html          # Arena principal
+│
+├── 🎨 Estilos Visuais
+│   ├── index.css          # Estilo do portal
+│   ├── espera.css         # Estilo da espera
+│   └── jogo.css           # Estilo do jogo
+│
+├── ⚙️ Scripts (Modularizados)
+│   ├── 🔥 firebase/       # Integração Firebase
+│   │   ├── config.js      # Configurações
+│   │   └── database.js    # Operações DB
+│   │
+│   ├── 👤 nome.js         # Gerenciamento de usuário
+│   ├── 🧮 fila.js         # Sistema de filas
+│   ├── 🤝 pareamento.js   # Algoritmo de matching
+│   ├── 🎯 jogo.js         # Núcleo do jogo
+│   ├── 🔊 leitor.js       # Controle de áudio
+│   ├── 👂 ouvinte.js      # Lógica do descritor
+│   ├── ❓ perguntas.js    # Banco de questões
+│   ├── 🛠️ util.js         # Utilitários
+│   └── ⏳ espera.js       # Gerenciamento de espera
+│
+├── 📚 Biblioteca de Sons (20+ Ambientes)
+│
+└── 📊 perguntas.json     # Banco de desafios
 ```
 
-## 🚀 Funcionamento Técnico
+## 🚀 Configuração Rápida
 
-### 1. Fluxo do Jogador
+### 📋 Pré-requisitos
 
-1. **Entrada**: Jogador digita nome em `index.html`
-2. **Fila**: Entra na fila de espera (`espera.html`)
-3. **Pareamento**: Sistema forma duplas aleatórias automaticamente
-4. **Jogo**: Redireciona para `jogo.html` com ID da partida
-5. **Execução**: Um ouve/descreve, outro identifica
-6. **Término**: Pontuação final e opção de jogar novamente
-
-### 2. Integração com Firebase
-
-- **Configuração**: Credenciais em `scripts/firebase/config.js`
-- **Estrutura de Dados**:
-  - `birdbox/players/`: Registro de jogadores
-  - `birdbox/queue/`: Fila de espera por parceiros
-  - `birdbox/games/`: Partidas em andamento
-  - `birdbox/questions/`: Banco de perguntas (opcional)
-
-### 3. Recursos Técnicos
-
-- **Design Responsivo**: Bootstrap 5 + CSS personalizado
-- **Audio API**: Reprodução de sons ambientes
-- **Tempo Real**: Atualizações instantâneas via Firebase
-- **Persistência**: localStorage para dados de sessão
-- **Fallback**: Banco local de perguntas (JSON)
-
-## 🛠️ Configuração e Instalação
-
-### Pré-requisitos
-
-- Navegador moderno com suporte a JavaScript ES6+
+- Navegador moderno (Chrome, Firefox, Edge)
 - Conta Firebase (gratuita)
-- Servidor web local (opcional, pode abrir direto no navegador)
+- Microfone (recomendado)
+- Fones de ouvido (experiência ideal)
 
-### Setup do Firebase
+### 🔧 Setup em 3 Passos
 
-1. Crie um projeto em [console.firebase.google.com](https://console.firebase.google.com)
-2. Ative o **Realtime Database**
-3. Substitua as credenciais em `scripts/firebase/config.js`:
+1. **Crie projeto no [Firebase Console](https://console.firebase.google.com/)**
+2. **Configure Realtime Database**
+3. **Atualize `config.js` com suas credenciais:**
 
 ```javascript
+// scripts/firebase/config.js
 const firebaseConfig = {
-  apiKey: "sua-api-key",
+  apiKey: "sua-chave-unica",
   authDomain: "seu-projeto.firebaseapp.com",
-  databaseURL: "https://seu-projeto.firebaseio.com",
+  databaseURL: "https://seu-projeto-rtdb.firebaseio.com",
   projectId: "seu-projeto-id",
   storageBucket: "seu-projeto.appspot.com",
-  messagingSenderId: "seu-sender-id",
-  appId: "seu-app-id",
+  messagingSenderId: "123456789",
+  appId: "seu-app-id-exclusivo",
 };
 ```
 
-### Configuração de Regras do Banco (Firebase Console)
-
-```json
-{
-  "rules": {
-    "birdbox": {
-      "queue": {
-        ".read": true,
-        ".write": true
-      },
-      "games": {
-        ".read": "auth != null", // Ou ajuste conforme necessidade
-        ".write": "auth != null"
-      }
-    }
-  }
-}
-```
-
-## 🎮 Como Jogar
-
-1. **Acesse** o jogo através de `index.html`
-2. **Digite** seu nome (mínimo 2 caracteres)
-3. **Aguarde** o sistema encontrar um parceiro
-4. **Escute** atentamente (jogador ouvinte)
-5. **Descreva** o que ouve (jogador ouvinte)
-6. **Selecione** a opção correta (jogador adivinhador)
-7. **Avance** para a próxima rodada
-8. **Finalize** quando completar todas as perguntas
-
-## 📊 Estrutura de Dados das Perguntas
-
-Exemplo de `perguntas.json`:
-
-```json
-{
-  "perguntas": [
-    {
-      "id": 1,
-      "som": "floresta.mp3",
-      "pergunta": "Que ambiente sonoro é este?",
-      "opcoes": ["Floresta", "Cidade", "Praia", "Deserto"],
-      "resposta_correta": 0,
-      "dificuldade": 2,
-      "categoria": "natureza"
-    },
-    {
-      "id": 2,
-      "som": "chuva.mp3",
-      "pergunta": "Que fenômeno meteorológico é este?",
-      "opcoes": ["Chuva", "Vento", "Trovão", "Granizo"],
-      "resposta_correta": 0,
-      "dificuldade": 1,
-      "categoria": "clima"
-    }
-  ]
-}
-```
-
-## 🔧 Personalização
-
-### Adicionar Novos Sons
-
-1. Adicione arquivos de áudio em `arquivos/sons/ambiente/`
-2. Atualize o `perguntas.json` com as novas entradas
-3. Referencie corretamente o nome do arquivo
-
-### Modificar Estilo
-
-- Edite os arquivos CSS em `estilos/`
-- Cores principais estão definidas como variáveis CSS
-- Layout responsivo com breakpoints móveis
-
-### Ajustar Dificuldade
-
-- Modifique o campo `dificuldade` nas perguntas
-- Ajuste o número de rodadas em `scripts/jogo.js`
-
-## 🌐 Hospedagem
-
-### Opção 1: GitHub Pages
-
-1. Faça push para um repositório GitHub
-2. Ative GitHub Pages nas configurações do repositório
-3. Acesse via `https://seuusuario.github.io/birdbox-jogo`
-
-### Opção 2: Firebase Hosting (Recomendado)
+### 🎮 Execução Local
 
 ```bash
-# Instale o CLI do Firebase
-npm install -g firebase-tools
+# Opção 1: Python
+python -m http.server 8000
 
-# Login e configuração
+# Opção 2: Node.js
+npx serve .
+
+# Opção 3: PHP
+php -S localhost:8000
+
+# Acesse: http://localhost:8000
+```
+
+## 🎯 Como Jogar
+
+### 👤 Para o Descritor
+
+1. 🎧 Use bons fones de ouvido
+2. 🔈 Ajuste o volume confortavelmente
+3. 🗣️ Descreva com detalhes sensoriais
+4. ⏱️ Seja claro e objetivo no tempo
+
+### 👤 Para o Adivinhador
+
+1. 👂 Escute atentamente as dicas
+2. 🤔 Associe com as opções disponíveis
+3. ✅ Selecione com convicção
+4. 🔁 Aprenda com cada rodada
+
+### ⚙️ Configurações Padrão
+
+- **Rodadas**: 5 por partida
+- **Tempo**: 45 segundos/rodada
+- **Pontuação Base**: 10 pontos/acerto
+- **Bônus Sequência**: +5 pontos consecutivos
+
+## 🎨 Personalização
+
+### ➕ Adicionar Novos Sons
+
+1. Adicione arquivo MP3 em `arquivos/sons/`
+2. Registre no `perguntas.json`:
+
+```json
+{
+  "id": 21,
+  "som": "meu-novo-som.mp3",
+  "pergunta": "O que este som representa?",
+  "opcoes": ["Opção A", "Opção B", "Opção C", "Opção D"],
+  "resposta_correta": 0,
+  "dificuldade": 3,
+  "categoria": "personalizado"
+}
+```
+
+### 🎨 Customizar Aparência
+
+Modifique as variáveis CSS em `estilos/`:
+
+```css
+:root {
+  --primary: #2c3e50;
+  --secondary: #e74c3c;
+  --accent: #f39c12;
+  --text: #ecf0f1;
+  --background: #34495e;
+}
+```
+
+## 🌐 Deploy e Hospedagem
+
+### 🚀 Firebase Hosting (Recomendado)
+
+```bash
+npm install -g firebase-tools
 firebase login
 firebase init hosting
-
-# Deploy
 firebase deploy
 ```
 
-### Opção 3: Servidor Local
+### 📊 GitHub Pages
 
-```bash
-# Python 3
-python -m http.server 8000
+1. Push para repositório GitHub
+2. Settings > Pages > Branch main
+3. Acesse: `https://lyuri26.github.io/Semana-Biblioteca-2025`
 
-# Python 2
-python -m SimpleHTTPServer 8000
+### 🐳 Outras Opções
 
-# Node.js (se tiver serve instalado)
-npx serve publico
-```
+- **Netlify**: Arraste pasta para deploy
+- **Vercel**: Conecte repositório Git
+- **Traditional**: Qualquer servidor web
 
 ## 🐛 Solução de Problemas
 
-### Erro de Conexão Firebase
+### ❌ Erros Comuns e Soluções
 
-- Verifique as credenciais no `config.js`
-- Confirme as regras de segurança do banco
+| Problema               | Solução                           |
+| ---------------------- | --------------------------------- |
+| **Audio não funciona** | Verifique permissões do navegador |
+| **Pareamento falha**   | Confirme regras do Firebase       |
+| **Conexão lenta**      | Teste em rede estável             |
+| **Mobile não carrega** | Use navegador atualizado          |
 
-### Áudio Não Reproduz
+### 🔧 Debug Avançado
 
-- Servidor deve servir arquivos com headers corretos
-- Verifique caminhos dos arquivos de som
+```javascript
+// Ative debug no console
+localStorage.setItem("debug", "true");
+// Recarregue a página para logs detalhados
+```
 
-### Pareamento Não Funciona
+**Desenvolvido com ❤️ para a Semana da Biblioteca 2025**
 
-- Verifique se há pelo menos 2 jogadores na fila
-- Confirme as permissões de escrita no Firebase
-
-## 📝 Próximas Melhorias
-
-- [ ] Sistema de convite para amigos específicos
-- [ ] Chat por texto durante o jogo
-- [ ] Ranking de jogadores
-- [ ] Modo solo contra o tempo
-- [ ] Mais categorias de sons
-- [ ] Efeitos sonoros imersivos
-- [ ] Temas visuais alternativos
-
-## 📞 Suporte
-
-Para issues e dúvidas:
-
-1. Verifique a documentação do Firebase
-2. Confirme se todos os arquivos estão nos paths corretos
-3. Teste em diferentes navegadores
-
-## 📄 Licença
-
-Este projeto é opensource e está sob licença MIT. Sinta-se à vontade para modificar e distribuir.
-
----
-
-**Desenvolvido para a Semana da Biblioteca 2025** 📚🎉
-
-_Inspirado no livro "Bird Box" de Josh Malerman - uma experiência de cooperação e confiança através dos sentidos._
+_"Na escuridão, descobrimos que nossa verdadeira visão vem daquilo que estamos dispostos a ouvir."_

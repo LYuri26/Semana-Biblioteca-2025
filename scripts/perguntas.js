@@ -3,7 +3,7 @@ class QuestionManager {
   // Carregar perguntas do JSON
   static async loadQuestions() {
     try {
-      const response = await fetch("/arquivos/dados/perguntas.json");
+      const response = await fetch("arquivos/dados/perguntas.json");
       if (!response.ok) throw new Error("Erro ao carregar perguntas");
 
       const data = await response.json();
