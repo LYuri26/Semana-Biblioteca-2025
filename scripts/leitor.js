@@ -60,7 +60,6 @@ class IdentifierManager {
     }
   }
 
-  // Resetar interface - MODIFICADO: não resetar texto se já temos uma pergunta
   static resetAnswerInterface() {
     const options = document.querySelectorAll(".option-btn");
     const submitButton = document.getElementById("submitAnswer");
@@ -99,7 +98,6 @@ class IdentifierManager {
       descElement.textContent = description;
       descElement.classList.add("active");
     }
-    // REMOVIDO: IdentifierManager.enableAnswerOptions();
   }
 
   // Habilitar opções de resposta
@@ -171,25 +169,5 @@ class IdentifierManager {
     const basePoints = 100;
     const difficultyMultiplier = question.dificuldade || 1;
     return basePoints * difficultyMultiplier;
-  }
-
-  // Resetar interface
-  static resetAnswerInterface() {
-    const options = document.querySelectorAll(".option-btn");
-    options.forEach((option) => {
-      option.classList.remove("selected", "correct", "incorrect", "disabled");
-      const optionText = option.querySelector(".option-text");
-      if (optionText) optionText.textContent = "Aguardando próxima rodada...";
-    });
-
-    const descElement = document.getElementById("partnerDescription");
-    if (descElement) {
-      descElement.textContent = "Aguardando descrição do ouvinte...";
-      descElement.classList.remove("active");
-    }
-
-    const submitButton = document.getElementById("submitAnswer");
-    if (submitButton) submitButton.disabled = true;
-    window.selectedOption = null;
   }
 }

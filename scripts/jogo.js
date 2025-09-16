@@ -343,10 +343,15 @@ class GameManager {
   // Carregar pergunta da rodada atual
   async loadQuestionForCurrentRound() {
     if (this.currentRound <= this.totalRounds) {
-      [this.currentRound - 1];
+      this.currentQuestion = this.selectedQuestions[this.currentRound - 1];
 
       // APENAS O OUVINTE ATUALIZA A PERGUNTA NO FIREBASE
+      // jogo.js → dentro de loadQuestionForCurrentRound()
       if (this.playerRole === "ouvinte") {
+        await firebaseDB.db
+          .ref(`birdbox/games/${this.gameId}/currentRound`)
+          .set(this.currentRound);
+
         await firebaseDB.db
           .ref(`birdbox/games/${this.gameId}/currentQuestion`)
           .set(this.currentQuestion.id);
