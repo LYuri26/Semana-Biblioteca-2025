@@ -41,20 +41,33 @@ class QuestionManager {
     const correctAnswer = question.opcoes[question.resposta_correta];
     options.push(correctAnswer);
 
-    const wrongOptions = Utils.shuffleArray([...wrongOptionsPool])
-      .filter((opt) => opt !== correctAnswer && !question.opcoes.includes(opt))
-      .slice(0, 3);
+    // Número total de opções desejadas
+    const totalOptions = 4;
 
-    options.push(...wrongOptions);
+    // Filtrar opções erradas que não estão nas opções corretas
+    const filteredWrongOptions = wrongOptionsPool.filter(
+      (opt) => opt !== correctAnswer && !question.opcoes.includes(opt)
+    );
+
+    // Embaralhar e pegar as opções restantes necessárias
+    const neededWrongOptions = Utils.shuffleArray(filteredWrongOptions).slice(
+      0,
+      totalOptions - 1
+    );
+
+    options.push(...neededWrongOptions);
+
+    // Embaralhar todas as opções antes de retornar
     const shuffledOptions = Utils.shuffleArray(options);
 
-    const newCorrectIndex = shuffledOptions.findIndex(
+    // Obter índice da resposta correta
+    const correctIndex = shuffledOptions.findIndex(
       (opt) => opt === correctAnswer
     );
 
     return {
       options: shuffledOptions,
-      correctIndex: newCorrectIndex,
+      correctIndex: correctIndex,
     };
   }
 }

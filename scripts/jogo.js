@@ -1,10 +1,7 @@
 // Gerenciador principal do jogo BirdBox
 // Variáveis de controle
-let currentRound = 0;
-const totalRounds = 4;
-let selectedOption = null;
+
 let inactivityTimer = null;
-this.isAdvancing = false; // novo flag
 
 class GameManager {
   constructor() {
@@ -32,27 +29,14 @@ class GameManager {
   }
 
   async checkAndAdvanceRound() {
-    const snapshot = await firebaseDB.db
-      .ref(`birdbox/games/${this.gameId}/jogadores`)
-      .once("value");
+    // Apenas este jogador avança, independente do parceiro
+    await firebaseDB.db
+      .ref(
+        `birdbox/games/${this.gameId}/jogadores/${this.playerId}/readyForNextRound`
+      )
+      .set(false);
 
-    const players = snapshot.val();
-    let allReady = true;
-
-    Object.keys(players).forEach((id) => {
-      if (!players[id].readyForNextRound) allReady = false;
-    });
-
-    if (allReady) {
-      // Resetar flag
-      Object.keys(players).forEach(async (id) => {
-        await firebaseDB.db
-          .ref(`birdbox/games/${this.gameId}/jogadores/${id}/readyForNextRound`)
-          .set(false);
-      });
-
-      this.advanceToNextRound();
-    }
+    this.advanceToNextRound();
   }
 
   // Inicializar o jogo
@@ -224,21 +208,31 @@ class GameManager {
     const prevButton = document.getElementById("prevRound");
     const finishButton = document.getElementById("finishGame");
 
-    if (nextButton) {
-      nextButton.addEventListener("click", () => {
-        this.advanceToNextRound();
-      });
-    }
+    nextButton.addEventListener("click", async () => {
+      if (this.currentRound < this.totalRounds) {
+        this.currentRound++;
+        await firebaseDB.db
+          .ref(
+            `birdbox/games/${this.gameId}/jogadores/${this.playerId}/currentRound`
+          )
+          .set(this.currentRound);
 
-    if (prevButton) {
-      prevButton.addEventListener("click", () => {
-        if (this.currentRound > 1) {
-          this.currentRound--;
-          this.updateRoundDisplay();
-          this.loadQuestionForCurrentRound();
-        }
-      });
-    }
+        await this.loadQuestionForCurrentRound(); // garante pergunta sincronizada
+      }
+    });
+
+    prevButton.addEventListener("click", async () => {
+      if (this.currentRound > 1) {
+        this.currentRound--;
+        await firebaseDB.db
+          .ref(
+            `birdbox/games/${this.gameId}/jogadores/${this.playerId}/currentRound`
+          )
+          .set(this.currentRound);
+
+        await this.loadQuestionForCurrentRound();
+      }
+    });
 
     if (finishButton) {
       finishButton.addEventListener("click", () => {
@@ -258,30 +252,6 @@ class GameManager {
       });
 
     if (this.playerRole === "adivinhador") {
-      this.descriptionListener = firebaseDB.db
-        .ref(`birdbox/games/${this.gameId}/currentDescription`)
-        .on("value", (snapshot) => {
-          const description = snapshot.val();
-          if (description) {
-            IdentifierManager.updatePartnerDescription(description);
-          }
-        });
-    }
-
-    this.roundListener = firebaseDB.db
-      .ref(`birdbox/games/${this.gameId}/currentRound`)
-      .on("value", (snapshot) => {
-        const round = snapshot.val();
-        if (round && round !== this.currentRound) {
-          this.currentRound = round;
-          this.updateRoundDisplay();
-          if (this.playerRole === "adivinhador") {
-            IdentifierManager.resetAnswerInterface();
-          }
-        }
-      });
-
-    if (this.playerRole === "adivinhador") {
       this.questionListener = firebaseDB.db
         .ref(`birdbox/games/${this.gameId}/currentQuestion`)
         .on("value", async (snapshot) => {
@@ -292,11 +262,31 @@ class GameManager {
         });
     }
 
+    this.roundListener = firebaseDB.db
+      .ref(
+        `birdbox/games/${this.gameId}/jogadores/${this.playerId}/currentRound`
+      )
+      .on("value", (snapshot) => {
+        const round = snapshot.val();
+        if (round && round !== this.currentRound) {
+          this.currentRound = round;
+          this.updateRoundDisplay();
+
+          if (this.playerRole === "adivinhador") {
+            IdentifierManager.resetAnswerInterface();
+          } else if (this.playerRole === "ouvinte") {
+            ListenerManager.updateInterface(
+              this.currentRound,
+              this.totalRounds
+            );
+          }
+        }
+      });
+
     // Listener para verificar se ambos finalizaram
     this.playersListener = firebaseDB.db
       .ref(`birdbox/games/${this.gameId}/jogadores`)
       .on("value", (snapshot) => {
-        this.checkAndAdvanceRound(); // Avança só se ambos estiverem prontos
         this.checkIfBothPlayersFinished(snapshot.val());
       });
   }
@@ -338,10 +328,11 @@ class GameManager {
     );
     this.currentQuestion.displayOptions = preparedOptions.options;
     this.currentQuestion.correctDisplayIndex = preparedOptions.correctIndex;
-
     if (this.playerRole === "ouvinte") {
       ListenerManager.prepareAudio(this.currentQuestion);
       ListenerManager.updateInterface(this.currentRound, this.totalRounds);
+    } else {
+      IdentifierManager.updateOptions(this.currentQuestion);
     }
 
     this.updateRoundDisplay();
@@ -390,20 +381,23 @@ class GameManager {
   }
 
   async advanceToNextRound() {
-    if (this.isAdvancing) return; // evita múltiplos cliques
+    if (this.isAdvancing) return;
     this.isAdvancing = true;
 
     if (this.currentRound < this.totalRounds) {
       this.currentRound++;
       await firebaseDB.db
-        .ref(`birdbox/games/${this.gameId}/currentRound`)
+        .ref(
+          `birdbox/games/${this.gameId}/jogadores/${this.playerId}/currentRound`
+        )
         .set(this.currentRound);
 
       if (this.playerRole === "ouvinte") {
         await firebaseDB.db
           .ref(`birdbox/games/${this.gameId}/currentDescription`)
           .set(null);
-        await this.loadNextQuestion();
+        // Não carregar nova pergunta, apenas atualizar interface
+        ListenerManager.updateInterface(this.currentRound, this.totalRounds);
       } else {
         IdentifierManager.resetAnswerInterface();
         this.updateRoundDisplay();
@@ -413,7 +407,6 @@ class GameManager {
       this.updateRoundDisplay();
     }
 
-    // Pequeno delay para evitar duplo clique
     setTimeout(() => {
       this.isAdvancing = false;
     }, 100);
@@ -603,18 +596,6 @@ class GameManager {
   hideLoadingScreen() {
     const loadingOverlay = document.getElementById("loadingOverlay");
     if (loadingOverlay) loadingOverlay.classList.remove("active");
-  }
-}
-
-function updateRoundDisplay() {
-  const roundNumber = document.getElementById("roundNumber");
-  const currentRoundEl = document.getElementById("currentRound");
-
-  if (roundNumber) {
-    roundNumber.textContent = `${gameManager.currentRound}/${gameManager.totalRounds}`;
-  }
-  if (currentRoundEl) {
-    currentRoundEl.textContent = `${gameManager.currentRound}/${gameManager.totalRounds}`;
   }
 }
 
