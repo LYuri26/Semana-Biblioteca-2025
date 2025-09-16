@@ -41,8 +41,8 @@ class IdentifierManager {
     if (question && question.displayOptions) {
       question.displayOptions.forEach((option, index) => {
         if (optionButtons[index]) {
-          optionButtons[index].querySelector(".option-text").textContent =
-            option;
+          const optionText = optionButtons[index].querySelector(".option-text");
+          if (optionText) optionText.textContent = option;
           optionButtons[index].dataset.option = index;
           optionButtons[index].classList.remove("disabled");
         }
@@ -50,6 +50,45 @@ class IdentifierManager {
 
       // HABILITAR OPÇÕES IMEDIATAMENTE, SEM AGUARDAR DESCRIÇÃO
       IdentifierManager.enableAnswerOptions();
+    } else {
+      // Se não há opções, mostrar estado de espera
+      optionButtons.forEach((button, index) => {
+        const optionText = button.querySelector(".option-text");
+        if (optionText) optionText.textContent = "Aguardando...";
+        button.classList.add("disabled");
+      });
+    }
+  }
+
+  // Resetar interface - MODIFICADO: não resetar texto se já temos uma pergunta
+  static resetAnswerInterface() {
+    const options = document.querySelectorAll(".option-btn");
+    const submitButton = document.getElementById("submitAnswer");
+
+    // Apenas resetar seleções, não o texto se já temos uma pergunta
+    options.forEach((option) => {
+      option.classList.remove("selected", "correct", "incorrect");
+      option.classList.add("disabled"); // manter desabilitado até enableAnswerOptions()
+    });
+
+    if (submitButton) submitButton.disabled = true;
+    window.selectedOption = null;
+  }
+  async loadQuestionForIdentifier(questionId) {
+    try {
+      this.currentQuestion = this.questions.find((q) => q.id === questionId);
+      if (this.currentQuestion) {
+        const preparedOptions = QuestionManager.prepareQuestionOptions(
+          this.currentQuestion,
+          this.wrongOptionsPool
+        );
+        this.currentQuestion.displayOptions = preparedOptions.options;
+        this.currentQuestion.correctDisplayIndex = preparedOptions.correctIndex;
+        IdentifierManager.updateOptions(this.currentQuestion);
+        this.updateRoundDisplay();
+      }
+    } catch (error) {
+      console.error("Erro ao carregar pergunta:", error);
     }
   }
 

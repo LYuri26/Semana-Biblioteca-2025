@@ -380,6 +380,16 @@ class GameManager {
 
         this.updateRoundDisplay();
         IdentifierManager.resetAnswerInterface();
+
+        // CARREGAR NOVA PERGUNTA APÓS AVANÇAR
+        const questionSnapshot = await firebaseDB.db
+          .ref(`birdbox/games/${this.gameId}/currentQuestion`)
+          .once("value");
+        const currentQuestionId = questionSnapshot.val();
+
+        if (currentQuestionId) {
+          await this.loadQuestionForIdentifier(currentQuestionId);
+        }
       } else {
         this.currentRound = this.totalRounds;
         this.updateRoundDisplay();
