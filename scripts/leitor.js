@@ -33,7 +33,7 @@ class IdentifierManager {
     }
   }
 
-  // Atualizar opções
+  // Atualizar opções - MODIFICADO: habilitar opções imediatamente
   static updateOptions(question) {
     const optionsContainer = document.getElementById("optionsContainer");
     const optionButtons = optionsContainer.querySelectorAll(".option-btn");
@@ -47,17 +47,20 @@ class IdentifierManager {
           optionButtons[index].classList.remove("disabled");
         }
       });
+
+      // HABILITAR OPÇÕES IMEDIATAMENTE, SEM AGUARDAR DESCRIÇÃO
+      IdentifierManager.enableAnswerOptions();
     }
   }
 
-  // Atualizar descrição do parceiro
+  // Atualizar descrição do parceiro - MODIFICADO: não habilita mais opções
   static updatePartnerDescription(description) {
     const descElement = document.getElementById("partnerDescription");
     if (descElement) {
       descElement.textContent = description;
       descElement.classList.add("active");
     }
-    IdentifierManager.enableAnswerOptions();
+    // REMOVIDO: IdentifierManager.enableAnswerOptions();
   }
 
   // Habilitar opções de resposta

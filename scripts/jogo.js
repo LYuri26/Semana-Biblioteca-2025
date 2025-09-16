@@ -331,6 +331,9 @@ class GameManager {
         this.currentQuestion.correctDisplayIndex = preparedOptions.correctIndex;
         IdentifierManager.updateOptions(this.currentQuestion);
         this.updateRoundDisplay();
+
+        // HABILITAR OPÇÕES IMEDIATAMENTE
+        IdentifierManager.enableAnswerOptions();
       }
     } catch (error) {
       console.error("Erro ao carregar pergunta:", error);
