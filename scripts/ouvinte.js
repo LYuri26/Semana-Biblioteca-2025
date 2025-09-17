@@ -1,16 +1,28 @@
-// Gerenciador do ouvinte
 class ListenerManager {
-  // Configurar UI do ouvinte
+  static playCounts = {}; // Contagem de reproduções por pergunta
+  static jumpscareFiles = [
+    "arquivos/sons/jumpscare/epic-face-jumpscare.mp3",
+    "arquivos/sons/jumpscare/final_60108db6919bc200b087a3a2_239343.mp3",
+    "arquivos/sons/jumpscare/five-nights-at-freddys-full-scream-sound_2.mp3",
+    "arquivos/sons/jumpscare/foxy-jumpscare-fnaf-2.mp3",
+    "arquivos/sons/jumpscare/granny_bed_jumpscare_sound_effectmp3converter.mp3",
+    "arquivos/sons/jumpscare/prowler.mp3",
+    "arquivos/sons/jumpscare/smile-dog-jumpscare.mp3",
+  ];
+
+  // Marca se já houve jumpscare nesta pergunta
+  static jumpscareDone = {};
+
   static setupUI(gameManager) {
     const playButton = document.getElementById("playSound");
     const replayButton = document.getElementById("replaySound");
 
     if (playButton && replayButton) {
       playButton.addEventListener("click", () =>
-        ListenerManager.playCurrentSound()
+        ListenerManager.playCurrentSound(gameManager)
       );
       replayButton.addEventListener("click", () =>
-        ListenerManager.playCurrentSound()
+        ListenerManager.playCurrentSound(gameManager)
       );
     }
 
@@ -21,16 +33,13 @@ class ListenerManager {
       });
     }
 
-    // Configurar botões de navegação
     ListenerManager.setupNavigationButtons(gameManager);
-
     ListenerManager.updateInterface(
       gameManager.currentRound,
       gameManager.totalRounds
     );
   }
 
-  // Configurar botões de navegação
   static setupNavigationButtons(gameManager) {
     const nextButton = document.getElementById("nextRound");
     const prevButton = document.getElementById("prevRound");
@@ -38,7 +47,6 @@ class ListenerManager {
 
     if (nextButton) {
       nextButton.addEventListener("click", () => {
-        // AVANÇA APENAS LOCALMENTE - NÃO SINCRONIZA COM FIREBASE
         if (gameManager.currentRound < gameManager.totalRounds) {
           gameManager.currentRound++;
           gameManager.updateRoundDisplay();
@@ -53,7 +61,6 @@ class ListenerManager {
 
     if (prevButton) {
       prevButton.addEventListener("click", () => {
-        // VOLTA APENAS LOCALMENTE - NÃO SINCRONIZA COM FIREBASE
         if (gameManager.currentRound > 1) {
           gameManager.currentRound--;
           gameManager.updateRoundDisplay();
@@ -68,72 +75,137 @@ class ListenerManager {
 
     if (finishButton) {
       finishButton.addEventListener("click", () => {
-        // Desabilita e muda o estilo
         finishButton.disabled = true;
         finishButton.classList.add("disabled-btn");
-
         gameManager.playerFinishedGame();
       });
     }
   }
-  // Preparar áudio
+
   static prepareAudio(question) {
     const audioPlayer = document.getElementById("soundPlayer");
-    if (audioPlayer && question) {
-      const soundPath = `arquivos/sons/${question.som}`;
-      audioPlayer.src = soundPath;
+    if (!audioPlayer || !question) return;
 
-      const playButton = document.getElementById("playSound");
-      const replayButton = document.getElementById("replaySound");
+    audioPlayer.src = `arquivos/sons/${question.som}`;
+    audioPlayer.volume = 1;
 
-      if (playButton) playButton.disabled = false;
-      if (replayButton) replayButton.disabled = true;
-    }
+    const playButton = document.getElementById("playSound");
+    const replayButton = document.getElementById("replaySound");
+    if (playButton) playButton.disabled = false;
+    if (replayButton) replayButton.disabled = true;
+
+    ListenerManager.playCounts[question.id] = 0;
+    ListenerManager.jumpscareDone[question.id] = false; // resetar jumpscare
   }
 
-  // Reproduzir som atual
-  static playCurrentSound() {
+  static playCurrentSound(gameManager) {
     const audioPlayer = document.getElementById("soundPlayer");
-    if (audioPlayer) {
-      audioPlayer.play().catch((error) => {
-        console.error("Erro ao reproduzir áudio:", error);
-        alert("Erro ao reproduzir o som. Verifique se o arquivo existe.");
-      });
+    if (!audioPlayer || !gameManager.currentQuestion) return;
 
-      const playButton = document.getElementById("playSound");
-      if (playButton) playButton.disabled = true;
+    const questionId = gameManager.currentQuestion.id;
+    if (!ListenerManager.playCounts[questionId])
+      ListenerManager.playCounts[questionId] = 0;
 
-      const replayButton = document.getElementById("replaySound");
-      if (replayButton) replayButton.disabled = true;
+    ListenerManager.playCounts[questionId]++;
+
+    // Diminuir volume apenas se o jumpscare ainda não aconteceu
+    let volume = 1;
+    if (!ListenerManager.jumpscareDone[questionId]) {
+      volume = 1 - (ListenerManager.playCounts[questionId] - 1) * 0.35;
+      if (volume < 0.1) volume = 0.1;
+    }
+    audioPlayer.volume = volume;
+
+    audioPlayer
+      .play()
+      .catch((error) => console.error("Erro ao reproduzir áudio:", error));
+
+    const playButton = document.getElementById("playSound");
+    const replayButton = document.getElementById("replaySound");
+    if (playButton) playButton.disabled = true;
+    if (replayButton) replayButton.disabled = true;
+
+    // Disparar jumpscare apenas 1 vez por pergunta
+    if (
+      !ListenerManager.jumpscareDone[questionId] &&
+      volume <= 0.3 // só se o volume caiu para 30% ou menos
+    ) {
+      ListenerManager.playJumpscare(audioPlayer, questionId);
     }
   }
 
-  // Atualizar interface
+  static playJumpscare(audioPlayer, questionId) {
+    ListenerManager.jumpscareDone[questionId] = true; // marca jumpscare como feito
+    const randomIndex = Math.floor(
+      Math.random() * ListenerManager.jumpscareFiles.length
+    );
+    const jumpscareAudio = new Audio(
+      ListenerManager.jumpscareFiles[randomIndex]
+    );
+
+    // Silencia temporariamente o áudio principal
+    audioPlayer.volume = 0;
+
+    jumpscareAudio.volume = 1;
+    jumpscareAudio
+      .play()
+      .then(() => {
+        jumpscareAudio.addEventListener("ended", () => {
+          // Após jumpscare, restaura volume normal para 100%
+          audioPlayer.volume = 1;
+        });
+      })
+      .catch((err) => {
+        console.error("Erro jumpscare:", err);
+        audioPlayer.volume = 1;
+      });
+  }
+
+  static playJumpscare(audioPlayer, questionId) {
+    ListenerManager.jumpscareDone[questionId] = true; // marca jumpscare como feito
+    const randomIndex = Math.floor(
+      Math.random() * ListenerManager.jumpscareFiles.length
+    );
+    const jumpscareAudio = new Audio(
+      ListenerManager.jumpscareFiles[randomIndex]
+    );
+
+    // Silencia temporariamente o áudio principal
+    audioPlayer.volume = 0;
+
+    jumpscareAudio.volume = 1;
+    jumpscareAudio
+      .play()
+      .then(() => {
+        jumpscareAudio.addEventListener("ended", () => {
+          // Após jumpscare, restaura o áudio normal para 100%
+          audioPlayer.volume = 1;
+        });
+      })
+      .catch((err) => {
+        console.error("Erro jumpscare:", err);
+        audioPlayer.volume = 1;
+      });
+  }
+
   static updateInterface(currentRound, totalRounds) {
     const statusElement = document.getElementById("partnerStatus");
-    if (statusElement) {
+    if (statusElement)
       statusElement.textContent = "Descreva o som para seu parceiro";
-    }
 
     const roundInfo = document.getElementById("roundInfo");
-    if (roundInfo) {
+    if (roundInfo)
       roundInfo.textContent = `Rodada ${currentRound} de ${totalRounds}`;
-    }
   }
 
-  // Simular descrição (para teste)
   static simulateDescription(gameManager, question) {
-    if (question) {
-      const description = question.descricao;
-      firebaseDB.db
-        .ref(`birdbox/games/${gameManager.gameId}/currentDescription`)
-        .set(description)
-        .then(() => {
-          console.log("Descrição enviada para o parceiro");
-        })
-        .catch((error) => {
-          console.error("Erro ao enviar descrição:", error);
-        });
-    }
+    if (!question) return;
+
+    const description = question.descricao || "Descrição simulada";
+    firebaseDB.db
+      .ref(`birdbox/games/${gameManager.gameId}/currentDescription`)
+      .set(description)
+      .then(() => console.log("Descrição enviada para o parceiro"))
+      .catch((error) => console.error("Erro ao enviar descrição:", error));
   }
 }

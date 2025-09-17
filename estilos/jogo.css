@@ -747,3 +747,10 @@ body {
     transform: scale(0.97);
   }
 }
+
+#audioPlayer {
+  display: none; /* esconde completamente */
+  visibility: hidden; /* garante que não apareça */
+  height: 0;
+  width: 0;
+}
