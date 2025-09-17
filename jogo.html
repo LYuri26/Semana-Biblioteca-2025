@@ -34,10 +34,7 @@
                         <span class="info-label">Rodada:</span>
                         <span id="currentRound">1/4</span>
                     </div>
-                    <div class="info-item">
-                        <span class="info-label">Pontos:</span>
-                        <span id="playerScore">0</span>
-                    </div>
+
                 </div>
             </div>
         </header>
@@ -138,24 +135,21 @@
         </main>
 
         <!-- Overlay de Fim de Jogo -->
+        <!-- Overlay de Fim de Jogo -->
         <div id="gameOverOverlay" class="game-overlay">
             <div class="game-result">
                 <h2>Fim de Jogo!</h2>
-                <div class="score-display">
-                    <p class="final-score">Pontuação Final: <span id="finalScore">0</span></p>
-                    <p class="rounds-completed">Rodadas Completas: <span id="roundsCompleted">0</span>/4</p>
-                    <p class="accuracy">Precisão: <span id="accuracyPercentage">0%</span></p>
-                </div>
                 <div class="result-actions">
-                    <button id="playAgainBtn" class="action-btn primary">
-                        Jogar Novamente
-                    </button>
                     <button id="mainMenuBtn" class="action-btn secondary">
                         Menu Principal
+                    </button>
+                    <button id="rankingBtn" class="action-btn primary">
+                        Ver Ranking
                     </button>
                 </div>
             </div>
         </div>
+
 
         <!-- Firebase SDK -->
         <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>

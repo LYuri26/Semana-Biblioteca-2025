@@ -1,18 +1,32 @@
-/* espera.css - Mobile First */
+/* espera.css - Mobile First Design System */
 :root {
-  --primary-color: #4361ee;
-  --secondary-color: #3a0ca3;
-  --text-light: #e0e0ff;
-  --text-muted: #9090c0;
+  --primary: #4361ee;
+  --primary-dark: #3a0ca3;
+  --primary-light: #4895ef;
+  --surface: rgba(20, 20, 40, 0.95);
+  --surface-light: rgba(30, 30, 60, 0.8);
+  --text: #f8f9fa;
+  --text-secondary: #a0a0c0;
+  --danger: #e63946;
+  --success: #4cc9f0;
+  --radius: 12px;
+  --transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  --shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+}
+
+* {
+  box-sizing: border-box;
+  -webkit-tap-highlight-color: transparent;
 }
 
 body {
-  background: linear-gradient(135deg, #0a0a1a 0%, #1a1a3a 100%);
+  background: linear-gradient(135deg, var(--dark-1) 0%, var(--dark-2) 100%);
   font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
   min-height: 100vh;
-  color: var(--text-light);
+  color: var(--text);
   margin: 0;
   padding: 0;
+  overflow-x: hidden;
 }
 
 .waiting-container {
@@ -31,7 +45,17 @@ body {
   left: 0;
   width: 100%;
   height: 100%;
-  background: rgba(10, 10, 30, 0.9);
+  background: radial-gradient(
+      circle at top right,
+      rgba(67, 97, 238, 0.15),
+      transparent 30%
+    ),
+    radial-gradient(
+      circle at bottom left,
+      rgba(58, 12, 163, 0.1),
+      transparent 30%
+    ),
+    rgba(10, 10, 30, 0.95);
   z-index: 1;
 }
 
@@ -39,34 +63,53 @@ body {
   position: relative;
   z-index: 2;
   text-align: center;
-  color: var(--text-light);
-  max-width: 400px;
-  padding: 2rem;
+  background: var(--surface);
+  backdrop-filter: blur(10px);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  padding: 2rem 1.5rem;
   width: 100%;
+  max-width: 400px;
+  animation: fadeInUp 0.6s ease-out;
 }
 
 .waiting-title {
   font-size: 1.8rem;
   font-weight: 700;
-  color: var(--primary-color);
+  background: linear-gradient(135deg, var(--primary-light), var(--primary));
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
   margin-bottom: 1rem;
-  text-shadow: 0 0 10px rgba(67, 97, 238, 0.5);
+  letter-spacing: -0.5px;
 }
 
 .waiting-text {
   font-size: 1rem;
+  line-height: 1.6;
   margin-bottom: 2rem;
-  color: var(--text-muted);
+  color: var(--text-secondary);
 }
 
 .player-count {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
   font-size: 1rem;
-  color: var(--text-light);
+  color: var(--text);
   margin-bottom: 2rem;
-  background: rgba(30, 30, 60, 0.7);
+  background: var(--surface-light);
   padding: 0.8rem 1.5rem;
-  border-radius: 8px;
-  display: inline-block;
+  border-radius: 50px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+.player-count::before {
+  content: "";
+  width: 10px;
+  height: 10px;
+  background: var(--success);
+  border-radius: 50%;
+  animation: pulse 1.5s infinite;
 }
 
 /* Loader animation */
@@ -79,15 +122,16 @@ body {
 
 .loader-inner {
   position: absolute;
-  border: 3px solid #4a4a8a;
+  border: 2px solid;
+  border-color: var(--primary) transparent transparent transparent;
   border-radius: 50%;
-  animation: pulse 1.5s infinite;
+  animation: spin 1.5s cubic-bezier(0.5, 0, 0.5, 1) infinite;
 }
 
 .loader-inner:nth-child(1) {
   width: 100%;
   height: 100%;
-  animation-delay: 0s;
+  animation-delay: -0.45s;
 }
 
 .loader-inner:nth-child(2) {
@@ -95,7 +139,7 @@ body {
   height: 80%;
   top: 10%;
   left: 10%;
-  animation-delay: 0.2s;
+  animation-delay: -0.3s;
 }
 
 .loader-inner:nth-child(3) {
@@ -103,42 +147,40 @@ body {
   height: 60%;
   top: 20%;
   left: 20%;
-  animation-delay: 0.4s;
+  animation-delay: -0.15s;
 }
 
-@keyframes pulse {
+@keyframes spin {
   0% {
-    transform: scale(0.8);
-    opacity: 0.7;
-    border-color: #4a4a8a;
-  }
-  50% {
-    transform: scale(1);
-    opacity: 0.3;
-    border-color: var(--primary-color);
+    transform: rotate(0deg);
   }
   100% {
-    transform: scale(0.8);
-    opacity: 0.7;
-    border-color: #4a4a8a;
+    transform: rotate(360deg);
   }
 }
 
 /* Cancel button */
 .btn-cancel {
-  background: rgba(120, 40, 40, 0.7);
-  border: 1px solid #8a4a4a;
-  color: #ffc0c0;
-  padding: 0.8rem 1.5rem;
-  border-radius: 8px;
-  transition: all 0.3s;
-  font-size: 0.9rem;
+  background: rgba(230, 57, 70, 0.15);
+  border: 1px solid rgba(230, 57, 70, 0.3);
+  color: #ffb3b8;
+  padding: 0.9rem 1.8rem;
+  border-radius: 50px;
+  transition: var(--transition);
+  font-size: 0.95rem;
+  font-weight: 500;
   cursor: pointer;
+  backdrop-filter: blur(10px);
 }
 
 .btn-cancel:hover {
-  background: rgba(140, 50, 50, 0.9);
-  color: white;
+  background: rgba(230, 57, 70, 0.25);
+  transform: translateY(-2px);
+  box-shadow: 0 6px 16px rgba(230, 57, 70, 0.2);
+}
+
+.btn-cancel:active {
+  transform: translateY(0);
 }
 
 /* Status animation */
@@ -146,7 +188,7 @@ body {
   margin: 2rem auto;
   width: 100%;
   height: 3px;
-  background: rgba(67, 97, 238, 0.2);
+  background: rgba(67, 97, 238, 0.1);
   border-radius: 2px;
   overflow: hidden;
   position: relative;
@@ -157,38 +199,50 @@ body {
   position: absolute;
   top: 0;
   left: -100%;
-  width: 100%;
+  width: 40%;
   height: 100%;
   background: linear-gradient(
     90deg,
     transparent,
-    var(--primary-color),
-    transparent
+    var(--primary-light),
+    var(--primary)
   );
-  animation: scanning 2s infinite linear;
+  animation: scanning 1.8s infinite ease-in-out;
 }
 
 @keyframes scanning {
   0% {
-    left: -100%;
+    left: -40%;
   }
   100% {
-    left: 100%;
+    left: 140%;
+  }
+}
+
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
   }
 }
 
 /* Responsividade */
 @media (max-width: 768px) {
   .waiting-content {
-    padding: 1.5rem;
+    padding: 1.8rem 1.2rem;
+    margin: 0 1rem;
   }
 
   .waiting-title {
-    font-size: 1.5rem;
+    font-size: 1.6rem;
   }
 
   .waiting-text {
-    font-size: 0.9rem;
+    font-size: 0.95rem;
   }
 
   .loader {
@@ -197,17 +251,33 @@ body {
   }
 }
 
-@media (max-width: 320px) {
+@media (max-width: 480px) {
   .waiting-content {
-    padding: 1rem;
+    padding: 1.5rem 1rem;
   }
 
   .waiting-title {
-    font-size: 1.3rem;
+    font-size: 1.5rem;
   }
 
   .player-count {
     font-size: 0.9rem;
-    padding: 0.6rem 1rem;
+    padding: 0.7rem 1.2rem;
+  }
+
+  .btn-cancel {
+    padding: 0.8rem 1.5rem;
+    font-size: 0.9rem;
+  }
+}
+
+/* Melhorar toque em dispositivos móveis */
+@media (hover: none) {
+  .btn-cancel:hover {
+    transform: none;
+  }
+
+  .btn-cancel:active {
+    transform: scale(0.97);
   }
 }

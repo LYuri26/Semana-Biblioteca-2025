@@ -21,4 +21,17 @@ document.addEventListener("DOMContentLoaded", function () {
 
     particlesContainer.appendChild(particle);
   }
+
+  // Abrir modal de regras
+  document.getElementById("openRules").addEventListener("click", () => {
+    const rulesModal = new bootstrap.Modal(
+      document.getElementById("rulesModal")
+    );
+    rulesModal.show();
+  });
+
+  // Abrir ranking - você pode criar a função para redirecionar para a página do ranking
+  document.getElementById("openRanking").addEventListener("click", () => {
+    window.location.href = "ranking.html"; // ou modal de ranking futuramente
+  });
 });

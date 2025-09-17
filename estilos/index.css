@@ -1,21 +1,32 @@
-/* index.css - Mobile First */
+/* index.css - Mobile First Design System */
 :root {
-  --primary-color: #4361ee;
-  --secondary-color: #3a0ca3;
-  --accent-color: #f72585;
-  --light-color: #f8f9fa;
-  --dark-color: #1a1a2e;
-  --text-light: #e0e0ff;
-  --text-muted: #9090c0;
+  --primary: #4361ee;
+  --primary-dark: #3a0ca3;
+  --primary-light: #4895ef;
+  --accent: #f72585;
+  --surface: rgba(20, 20, 40, 0.95);
+  --surface-light: rgba(30, 30, 60, 0.8);
+  --text: #f8f9fa;
+  --text-secondary: #a0a0c0;
+  --radius: 16px;
+  --transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  --shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
+  --input-height: 52px;
+}
+
+* {
+  box-sizing: border-box;
+  -webkit-tap-highlight-color: transparent;
 }
 
 body {
-  background: linear-gradient(135deg, var(--dark-color) 0%, #16213e 100%);
+  background: linear-gradient(135deg, #0a0a1a 0%, #1a1a3a 100%);
   font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
   min-height: 100vh;
-  color: var(--text-light);
+  color: var(--text);
   margin: 0;
   padding: 0;
+  overflow-x: hidden;
 }
 
 .birdbox-container {
@@ -34,29 +45,39 @@ body {
   left: 0;
   width: 100%;
   height: 100%;
-  background: rgba(10, 10, 30, 0.9);
+  background: radial-gradient(
+      circle at top right,
+      rgba(67, 97, 238, 0.15),
+      transparent 30%
+    ),
+    radial-gradient(
+      circle at bottom left,
+      rgba(58, 12, 163, 0.1),
+      transparent 30%
+    ),
+    rgba(10, 10, 30, 0.95);
   z-index: 1;
 }
 
 .birdbox-card {
   position: relative;
   z-index: 2;
-  background: rgba(20, 20, 40, 0.95);
-  border: 1px solid #4a4a8a;
-  border-radius: 12px;
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
-  backdrop-filter: blur(10px);
-  padding: 2rem;
+  background: var(--surface);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  backdrop-filter: blur(12px);
+  padding: 2.5rem 2rem;
   width: 100%;
-  max-width: 400px;
-  animation: fadeIn 0.5s ease-out;
+  max-width: 440px;
+  animation: fadeInUp 0.6s ease-out;
 }
 
 .card-content {
   text-align: center;
 }
 
-@keyframes fadeIn {
+@keyframes fadeInUp {
   from {
     opacity: 0;
     transform: translateY(20px);
@@ -68,76 +89,106 @@ body {
 }
 
 .birdbox-title {
-  font-size: 2rem;
-  font-weight: 700;
-  background: linear-gradient(45deg, #a0e0ff, var(--primary-color));
+  font-size: 2.2rem;
+  font-weight: 800;
+  background: linear-gradient(
+    135deg,
+    #a0e0ff,
+    var(--primary-light),
+    var(--primary)
+  );
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   margin-bottom: 0.5rem;
+  letter-spacing: -0.5px;
 }
 
 .birdbox-subtitle {
-  color: var(--text-muted);
-  font-size: 1rem;
-  margin-bottom: 2rem;
-  line-height: 1.4;
+  color: var(--text-secondary);
+  font-size: 1.05rem;
+  line-height: 1.6;
+  margin-bottom: 2.5rem;
 }
 
 .form-group {
-  margin-bottom: 1.2rem;
+  margin-bottom: 1.5rem;
   text-align: left;
 }
 
 .form-group label {
   display: block;
-  margin-bottom: 0.5rem;
-  color: var(--text-light);
+  margin-bottom: 0.7rem;
+  color: var(--text);
   font-weight: 500;
-  font-size: 0.9rem;
+  font-size: 0.95rem;
+  padding-left: 0.5rem;
 }
 
 .form-control {
-  background: rgba(30, 30, 60, 0.8);
-  border: 1px solid #4a4a8a;
-  color: white;
-  padding: 0.8rem;
-  border-radius: 8px;
-  transition: all 0.3s;
+  background: var(--surface-light);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  color: var(--text);
+  padding: 0 1.2rem;
+  height: var(--input-height);
+  border-radius: 12px;
+  transition: var(--transition);
   width: 100%;
   font-size: 1rem;
+  font-family: inherit;
 }
 
 .form-control:focus {
-  border-color: var(--primary-color);
-  box-shadow: 0 0 0 2px rgba(67, 97, 238, 0.2);
+  border-color: var(--primary);
+  box-shadow: 0 0 0 3px rgba(67, 97, 238, 0.2);
   outline: none;
+  transform: translateY(-2px);
 }
 
 .form-control::placeholder {
-  color: var(--text-muted);
+  color: var(--text-secondary);
+  opacity: 0.7;
 }
 
 .btn-birdbox {
-  background: linear-gradient(
-    45deg,
-    var(--primary-color),
-    var(--secondary-color)
-  );
+  background: linear-gradient(135deg, var(--primary), var(--primary-dark));
   border: none;
   color: white;
   padding: 1rem;
-  border-radius: 8px;
+  height: var(--input-height);
+  border-radius: 12px;
   font-weight: 600;
-  transition: all 0.3s;
+  transition: var(--transition);
   width: 100%;
   font-size: 1rem;
   cursor: pointer;
-  margin-bottom: 1rem;
+  margin-bottom: 1.5rem;
+  position: relative;
+  overflow: hidden;
+}
+
+.btn-birdbox::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgba(255, 255, 255, 0.2),
+    transparent
+  );
+  transition: 0.5s;
 }
 
 .btn-birdbox:hover {
-  transform: translateY(-1px);
-  box-shadow: 0 6px 20px rgba(67, 97, 238, 0.4);
+  transform: translateY(-3px);
+  box-shadow: 0 10px 25px rgba(67, 97, 238, 0.35);
+}
+
+.btn-birdbox:hover::before {
+  left: 100%;
 }
 
 .btn-birdbox:active {
@@ -145,39 +196,80 @@ body {
 }
 
 .info-text {
-  color: var(--text-muted);
-  font-size: 0.8rem;
+  color: var(--text-secondary);
+  font-size: 0.85rem;
   margin-top: 1.5rem;
-  line-height: 1.4;
+  line-height: 1.5;
+  padding: 0 0.5rem;
 }
 
 /* Responsividade */
 @media (max-width: 768px) {
   .birdbox-card {
-    padding: 1.5rem;
+    padding: 2rem 1.5rem;
     margin: 0 1rem;
   }
 
   .birdbox-title {
-    font-size: 1.8rem;
+    font-size: 1.9rem;
   }
 
   .birdbox-subtitle {
-    font-size: 0.9rem;
+    font-size: 0.98rem;
+    margin-bottom: 2rem;
+  }
+
+  .form-group {
+    margin-bottom: 1.3rem;
   }
 }
 
-@media (max-width: 320px) {
+@media (max-width: 480px) {
   .birdbox-card {
-    padding: 1rem;
+    padding: 1.8rem 1.2rem;
+    border-radius: 14px;
   }
 
   .birdbox-title {
-    font-size: 1.5rem;
+    font-size: 1.7rem;
   }
 
+  .birdbox-subtitle {
+    font-size: 0.92rem;
+    margin-bottom: 1.8rem;
+  }
+
+  .form-control,
   .btn-birdbox {
-    padding: 0.8rem;
-    font-size: 0.9rem;
+    height: 48px;
+    font-size: 0.95rem;
+  }
+
+  .info-text {
+    font-size: 0.8rem;
+  }
+}
+
+/* Melhorar toque em dispositivos móveis */
+@media (hover: none) {
+  .btn-birdbox:hover {
+    transform: none;
+  }
+
+  .btn-birdbox:active {
+    transform: scale(0.98);
+  }
+
+  .form-control:focus {
+    transform: none;
+  }
+}
+
+/* Prevenir zoom em inputs no iOS */
+@media screen and (max-width: 768px) {
+  input,
+  select,
+  textarea {
+    font-size: 16px !important;
   }
 }

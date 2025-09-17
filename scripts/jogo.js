@@ -178,17 +178,17 @@ class GameManager {
 
   // Configurar event listeners comuns
   setupCommonEventListeners() {
-    const playAgainBtn = document.getElementById("playAgainBtn");
-    if (playAgainBtn) {
-      playAgainBtn.addEventListener("click", () => {
-        this.restartGame();
-      });
-    }
-
     const mainMenuBtn = document.getElementById("mainMenuBtn");
     if (mainMenuBtn) {
       mainMenuBtn.addEventListener("click", () => {
         window.location.href = "index.html";
+      });
+    }
+
+    const rankingBtn = document.getElementById("rankingBtn");
+    if (rankingBtn) {
+      rankingBtn.addEventListener("click", () => {
+        window.location.href = "ranking.html"; // ou outro arquivo que você tiver
       });
     }
   }
@@ -219,10 +219,13 @@ class GameManager {
         // Apenas volta localmente - listener já cuida disso
       });
     }
-
     if (finishButton) {
       finishButton.addEventListener("click", () => {
-        this.playerFinishedGame();
+        gameManager.playerFinishedGame();
+
+        // só depois desabilita
+        finishButton.disabled = true;
+        finishButton.classList.add("disabled-btn");
       });
     }
   }
@@ -497,10 +500,8 @@ class GameManager {
 
   // Atualizar display da pontuação
   updateScoreDisplay() {
-    const scoreElement = document.getElementById("playerScore");
-    if (scoreElement) {
-      scoreElement.textContent = this.score;
-    }
+    const scoreEl = document.getElementById("playerScore");
+    if (scoreEl) scoreEl.textContent = this.score;
   }
 
   // Finalizar o jogo
@@ -527,22 +528,6 @@ class GameManager {
 
   // Mostrar tela de fim de jogo
   showGameOverScreen() {
-    const finalScore = document.getElementById("finalScore");
-    const roundsCompleted = document.getElementById("roundsCompleted");
-    const accuracyPercentage = document.getElementById("accuracyPercentage");
-
-    if (finalScore) finalScore.textContent = this.score;
-    if (roundsCompleted)
-      roundsCompleted.textContent = Math.min(
-        this.currentRound - 1,
-        this.totalRounds
-      );
-
-    if (this.playerRole === "adivinhador" && accuracyPercentage) {
-      const accuracy = this.calculateAccuracy();
-      accuracyPercentage.textContent = `${accuracy}%`;
-    }
-
     const gameOverOverlay = document.getElementById("gameOverOverlay");
     if (gameOverOverlay) gameOverOverlay.classList.add("active");
   }

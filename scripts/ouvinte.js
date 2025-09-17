@@ -68,6 +68,10 @@ class ListenerManager {
 
     if (finishButton) {
       finishButton.addEventListener("click", () => {
+        // Desabilita e muda o estilo
+        finishButton.disabled = true;
+        finishButton.classList.add("disabled-btn");
+
         gameManager.playerFinishedGame();
       });
     }

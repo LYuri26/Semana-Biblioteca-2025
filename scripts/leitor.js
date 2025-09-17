@@ -15,15 +15,19 @@ class IdentifierManager {
         if (optionText) optionText.textContent = "Aguardando...";
       });
 
-      submitButton.addEventListener("click", () => {
+      submitButton.onclick = () => {
         IdentifierManager.submitAnswer(gameManager);
-      });
+      };
       submitButton.disabled = true;
     }
 
     if (finishButton) {
       finishButton.addEventListener("click", () => {
         gameManager.playerFinishedGame();
+
+        // só depois desabilita
+        finishButton.disabled = true;
+        finishButton.classList.add("disabled-btn");
       });
     }
 
