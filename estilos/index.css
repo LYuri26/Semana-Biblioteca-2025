@@ -1,4 +1,4 @@
-/* index.css - Mobile First Design System */
+/* index.css - Mobile First Design System com imagem de fundo */
 :root {
   --primary: #4361ee;
   --primary-dark: #3a0ca3;
@@ -6,11 +6,12 @@
   --accent: #f72585;
   --surface: rgba(20, 20, 40, 0.95);
   --surface-light: rgba(30, 30, 60, 0.8);
+  --surface-dark: rgba(10, 10, 20, 0.9);
   --text: #f8f9fa;
   --text-secondary: #a0a0c0;
   --radius: 16px;
   --transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-  --shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
+  --shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
   --input-height: 52px;
 }
 
@@ -20,7 +21,13 @@
 }
 
 body {
-  background: linear-gradient(135deg, #0a0a1a 0%, #1a1a3a 100%);
+  background: linear-gradient(
+      135deg,
+      rgba(10, 10, 30, 0.9) 0%,
+      rgba(26, 26, 58, 0.8) 100%
+    ),
+    url("../arquivos/imagens/Caixa\ de\ pássaros\ Netflix.jpg") center/cover
+      fixed no-repeat;
   font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
   min-height: 100vh;
   color: var(--text);
@@ -38,8 +45,7 @@ body {
   position: relative;
 }
 
-.birdbox-container::before {
-  content: "";
+.background-overlay {
   position: absolute;
   top: 0;
   left: 0;
@@ -48,29 +54,65 @@ body {
   background: radial-gradient(
       circle at top right,
       rgba(67, 97, 238, 0.15),
-      transparent 30%
+      transparent 40%
     ),
     radial-gradient(
       circle at bottom left,
       rgba(58, 12, 163, 0.1),
-      transparent 30%
+      transparent 40%
     ),
-    rgba(10, 10, 30, 0.95);
+    rgba(10, 10, 30, 0.85);
   z-index: 1;
+}
+
+.particles {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 2;
+  overflow: hidden;
+}
+
+.particle {
+  position: absolute;
+  background: linear-gradient(135deg, var(--primary-light), var(--primary));
+  border-radius: 50%;
+  opacity: 0.15;
+  animation: float 25s infinite linear;
+  filter: blur(1px);
+}
+
+@keyframes float {
+  0% {
+    transform: translateY(100vh) rotate(0deg);
+    opacity: 0;
+  }
+  10% {
+    opacity: 0.2;
+  }
+  90% {
+    opacity: 0.2;
+  }
+  100% {
+    transform: translateY(-100px) rotate(360deg);
+    opacity: 0;
+  }
 }
 
 .birdbox-card {
   position: relative;
-  z-index: 2;
+  z-index: 3;
   background: var(--surface);
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.15);
   border-radius: var(--radius);
   box-shadow: var(--shadow);
-  backdrop-filter: blur(12px);
+  backdrop-filter: blur(20px);
   padding: 2.5rem 2rem;
   width: 100%;
   max-width: 440px;
-  animation: fadeInUp 0.6s ease-out;
+  animation: fadeInUp 0.8s ease-out;
 }
 
 .card-content {
@@ -80,7 +122,7 @@ body {
 @keyframes fadeInUp {
   from {
     opacity: 0;
-    transform: translateY(20px);
+    transform: translateY(30px);
   }
   to {
     opacity: 1;
@@ -99,8 +141,10 @@ body {
   );
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
+  background-clip: text;
   margin-bottom: 0.5rem;
   letter-spacing: -0.5px;
+  text-shadow: 0 2px 10px rgba(0, 0, 0, 0.3);
 }
 
 .birdbox-subtitle {
@@ -108,6 +152,7 @@ body {
   font-size: 1.05rem;
   line-height: 1.6;
   margin-bottom: 2.5rem;
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.5);
 }
 
 .form-group {
@@ -122,11 +167,12 @@ body {
   font-weight: 500;
   font-size: 0.95rem;
   padding-left: 0.5rem;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.5);
 }
 
 .form-control {
   background: var(--surface-light);
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.2);
   color: var(--text);
   padding: 0 1.2rem;
   height: var(--input-height);
@@ -135,11 +181,13 @@ body {
   width: 100%;
   font-size: 1rem;
   font-family: inherit;
+  box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.1);
 }
 
 .form-control:focus {
   border-color: var(--primary);
-  box-shadow: 0 0 0 3px rgba(67, 97, 238, 0.2);
+  box-shadow: 0 0 0 3px rgba(67, 97, 238, 0.25),
+    inset 0 2px 4px rgba(0, 0, 0, 0.1);
   outline: none;
   transform: translateY(-2px);
 }
@@ -150,7 +198,6 @@ body {
 }
 
 .btn-birdbox {
-  background: linear-gradient(135deg, var(--primary), var(--primary-dark));
   border: none;
   color: white;
   padding: 1rem;
@@ -161,9 +208,10 @@ body {
   width: 100%;
   font-size: 1rem;
   cursor: pointer;
-  margin-bottom: 1.5rem;
+  margin-bottom: 1rem;
   position: relative;
   overflow: hidden;
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
 }
 
 .btn-birdbox::before {
@@ -182,17 +230,39 @@ body {
   transition: 0.5s;
 }
 
-.btn-birdbox:hover {
-  transform: translateY(-3px);
-  box-shadow: 0 10px 25px rgba(67, 97, 238, 0.35);
-}
-
 .btn-birdbox:hover::before {
   left: 100%;
 }
 
+.btn-birdbox.btn-primary {
+  background: linear-gradient(135deg, var(--primary), var(--primary-dark));
+}
+
+.btn-birdbox.btn-primary:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 12px 30px rgba(67, 97, 238, 0.4);
+}
+
+.btn-birdbox.btn-secondary {
+  background: var(--surface-light);
+  color: var(--text);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.btn-birdbox.btn-secondary:hover {
+  background: rgba(255, 255, 255, 0.1);
+  transform: translateY(-2px);
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.3);
+}
+
 .btn-birdbox:active {
   transform: translateY(0);
+}
+
+.btn-birdbox:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  transform: none !important;
 }
 
 .info-text {
@@ -201,6 +271,71 @@ body {
   margin-top: 1.5rem;
   line-height: 1.5;
   padding: 0 0.5rem;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.5);
+}
+
+/* Modal customizado */
+.modal-content {
+  background: var(--surface-dark);
+  color: var(--text);
+  border-radius: var(--radius);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  backdrop-filter: blur(20px);
+  box-shadow: var(--shadow);
+}
+
+.modal-header {
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  padding: 1.5rem 1.5rem 1rem;
+}
+
+.modal-body {
+  padding: 1rem 1.5rem;
+}
+
+.modal-footer {
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+  padding: 1rem 1.5rem 1.5rem;
+}
+
+.modal-title {
+  font-weight: 600;
+  color: var(--text);
+}
+
+.btn-close-white {
+  filter: invert(1) grayscale(100%) brightness(200%);
+}
+
+/* Loading state */
+.btn-loading {
+  position: relative;
+  color: transparent !important;
+}
+
+.btn-loading::after {
+  content: "";
+  position: absolute;
+  width: 20px;
+  height: 20px;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  margin: auto;
+  border: 2px solid transparent;
+  border-top-color: #ffffff;
+  border-radius: 50%;
+  animation: button-loading-spinner 1s ease infinite;
+}
+
+@keyframes button-loading-spinner {
+  from {
+    transform: rotate(0turn);
+  }
+  to {
+    transform: rotate(1turn);
+  }
 }
 
 /* Responsividade */
@@ -221,6 +356,10 @@ body {
 
   .form-group {
     margin-bottom: 1.3rem;
+  }
+
+  .modal-dialog {
+    margin: 1rem;
   }
 }
 
@@ -248,6 +387,12 @@ body {
   .info-text {
     font-size: 0.8rem;
   }
+
+  .modal-header,
+  .modal-body,
+  .modal-footer {
+    padding: 1rem;
+  }
 }
 
 /* Melhorar toque em dispositivos móveis */
@@ -272,4 +417,36 @@ body {
   textarea {
     font-size: 16px !important;
   }
+}
+
+/* Animações de entrada */
+@keyframes slideInFromTop {
+  from {
+    opacity: 0;
+    transform: translateY(-50px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.birdbox-title {
+  animation: slideInFromTop 0.8s ease-out 0.2s both;
+}
+
+.birdbox-subtitle {
+  animation: slideInFromTop 0.8s ease-out 0.4s both;
+}
+
+.form-group {
+  animation: slideInFromTop 0.8s ease-out 0.6s both;
+}
+
+.d-grid {
+  animation: slideInFromTop 0.8s ease-out 0.8s both;
+}
+
+.info-text {
+  animation: slideInFromTop 0.8s ease-out 1s both;
 }

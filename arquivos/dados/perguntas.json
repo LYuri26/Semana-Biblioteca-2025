@@ -14,6 +14,7 @@
       ],
       "resposta_correta": 0,
       "dificuldade": 1,
+      "pontuacao_base": 150,
       "categoria": "natureza",
       "dica": "sussurros verdes"
     },
@@ -31,6 +32,7 @@
       ],
       "resposta_correta": 0,
       "dificuldade": 1,
+      "pontuacao_base": 120,
       "categoria": "clima",
       "dica": "lágrimas do céu"
     },
@@ -48,6 +50,7 @@
       ],
       "resposta_correta": 0,
       "dificuldade": 2,
+      "pontuacao_base": 250,
       "categoria": "urbano",
       "dica": "batimento cardíaco de concreto"
     },
@@ -65,6 +68,7 @@
       ],
       "resposta_correta": 0,
       "dificuldade": 2,
+      "pontuacao_base": 220,
       "categoria": "água",
       "dica": "veias da terra"
     },
@@ -82,6 +86,7 @@
       ],
       "resposta_correta": 0,
       "dificuldade": 2,
+      "pontuacao_base": 300,
       "categoria": "clima",
       "dica": "voz dos deuses"
     },
@@ -99,6 +104,7 @@
       ],
       "resposta_correta": 0,
       "dificuldade": 2,
+      "pontuacao_base": 180,
       "categoria": "natureza",
       "dica": "respiração oceânica"
     },
@@ -116,6 +122,7 @@
       ],
       "resposta_correta": 0,
       "dificuldade": 3,
+      "pontuacao_base": 400,
       "categoria": "clima",
       "dica": "mãos invisíveis"
     },
@@ -133,6 +140,7 @@
       ],
       "resposta_correta": 0,
       "dificuldade": 2,
+      "pontuacao_base": 280,
       "categoria": "ambiente",
       "dica": "dança transformadora"
     },
@@ -150,6 +158,7 @@
       ],
       "resposta_correta": 0,
       "dificuldade": 1,
+      "pontuacao_base": 100,
       "categoria": "animais",
       "dica": "diálogos alados"
     },
@@ -167,6 +176,7 @@
       ],
       "resposta_correta": 0,
       "dificuldade": 3,
+      "pontuacao_base": 450,
       "categoria": "animais",
       "dica": "ritmo da escuridão"
     },
@@ -184,6 +194,7 @@
       ],
       "resposta_correta": 0,
       "dificuldade": 3,
+      "pontuacao_base": 500,
       "categoria": "urbano",
       "dica": "ecossistema humano"
     },
@@ -201,6 +212,7 @@
       ],
       "resposta_correta": 0,
       "dificuldade": 2,
+      "pontuacao_base": 320,
       "categoria": "transporte",
       "dica": "serpente de aço"
     },
@@ -218,6 +230,7 @@
       ],
       "resposta_correta": 0,
       "dificuldade": 2,
+      "pontuacao_base": 270,
       "categoria": "urbano",
       "dica": "voz do bronze"
     },
@@ -235,6 +248,7 @@
       ],
       "resposta_correta": 0,
       "dificuldade": 3,
+      "pontuacao_base": 600,
       "categoria": "água",
       "dica": "queda poderosa"
     },
@@ -252,6 +266,7 @@
       ],
       "resposta_correta": 0,
       "dificuldade": 3,
+      "pontuacao_base": 550,
       "categoria": "ambiente",
       "dica": "sussurro do conhecimento"
     },
@@ -269,6 +284,7 @@
       ],
       "resposta_correta": 0,
       "dificuldade": 3,
+      "pontuacao_base": 480,
       "categoria": "clima",
       "dica": "quietude congelante"
     },
@@ -286,6 +302,7 @@
       ],
       "resposta_correta": 0,
       "dificuldade": 2,
+      "pontuacao_base": 350,
       "categoria": "animais",
       "dica": "coral aquático"
     },
@@ -303,6 +320,7 @@
       ],
       "resposta_correta": 0,
       "dificuldade": 3,
+      "pontuacao_base": 700,
       "categoria": "urbano",
       "dica": "pulso industrial"
     },
@@ -320,6 +338,7 @@
       ],
       "resposta_correta": 0,
       "dificuldade": 3,
+      "pontuacao_base": 800,
       "categoria": "animais",
       "dica": "sinfonia abissal"
     },
@@ -337,6 +356,7 @@
       ],
       "resposta_correta": 0,
       "dificuldade": 3,
+      "pontuacao_base": 1000,
       "categoria": "natureza",
       "dica": "explosão vital"
     }
@@ -463,13 +483,16 @@
   "configuracoes": {
     "total_rodadas": 4,
     "tempo_total_jogo": 180,
-    "pontos_base": 100,
-    "multiplicador_dificuldade": {
-      "1": 1,
-      "2": 1.5,
-      "3": 2
-    },
-    "opcoes_por_pergunta": 4,
-    "bonus_final": 50
+    "pontuacao": {
+      "minima": 100,
+      "maxima": 1000,
+      "decaimento_por_segundo": 2,
+      "bonus_rapidez": 50,
+      "multiplicador_dificuldade": {
+        "1": 1.0,
+        "2": 1.5,
+        "3": 2.0
+      }
+    }
   }
 }

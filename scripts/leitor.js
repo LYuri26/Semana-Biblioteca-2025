@@ -161,9 +161,10 @@ class IdentifierManager {
     }
   }
 
-  // Submeter resposta - VERSÃO CORRIGIDA
+  // Submeter resposta - VERSÃO COM TEMPO
   static async submitAnswer(gameManager) {
     const submitButton = document.getElementById("submitAnswer");
+    const startTime = gameManager.questionStartTime || Date.now();
 
     // PREVENIR MÚLTIPLOS CLICKS
     if (submitButton && submitButton.disabled) {
@@ -195,9 +196,14 @@ class IdentifierManager {
         submitButton.textContent = "Processando...";
       }
 
+      // 🎯 CALCULAR TEMPO DE RESPOSTA
+      const endTime = Date.now();
+      const tempoResposta = Math.round((endTime - startTime) / 1000); // Em segundos
+
       console.log("📝 Adivinhador submetendo resposta...", {
         selectedOption: selectedOption,
         correctIndex: gameManager.currentQuestion.correctDisplayIndex,
+        tempoResposta: tempoResposta + "s",
         pergunta: gameManager.currentQuestion.pergunta,
         rodada: gameManager.currentRound,
       });
@@ -227,8 +233,10 @@ class IdentifierManager {
       }
 
       if (isCorrect) {
+        // 🎯 CALCULAR PONTOS COM TEMPO
         const points = IdentifierManager.calculatePoints(
-          gameManager.currentQuestion
+          gameManager.currentQuestion,
+          tempoResposta
         );
         gameManager.score += points;
         gameManager.updateScoreDisplay();
@@ -242,9 +250,37 @@ class IdentifierManager {
           .set(gameManager.score);
 
         console.log("💾 Pontuação salva no Firebase:", gameManager.score);
+
+        // Feedback visual de acerto com pontos
+        if (selectedElement) {
+          const pointsElement = document.createElement("span");
+          pointsElement.className = "points-feedback";
+          pointsElement.textContent = `+${points}`;
+          pointsElement.style.cssText = `
+          color: #4CAF50;
+          font-weight: bold;
+          margin-left: 10px;
+          animation: fadeUp 1s ease-out;
+        `;
+          selectedElement.appendChild(pointsElement);
+
+          // Remover após animação
+          setTimeout(() => {
+            if (pointsElement.parentNode) {
+              pointsElement.remove();
+            }
+          }, 1000);
+        }
+      } else {
+        console.log("❌ Resposta incorreta - sem pontos");
+        // Feedback visual de erro
+        if (selectedElement) {
+          selectedElement.innerHTML +=
+            ' <span class="feedback-emoji">❌</span>';
+        }
       }
 
-      // Registrar resposta no histórico
+      // Registrar resposta no histórico com tempo
       try {
         await firebaseDB.db
           .ref(
@@ -253,39 +289,57 @@ class IdentifierManager {
           .set({
             opcaoSelecionada: selectedOption,
             correta: isCorrect,
-            tempo: Date.now(),
-            pontos: isCorrect
-              ? IdentifierManager.calculatePoints(gameManager.currentQuestion)
-              : 0,
+            tempo: endTime,
+            tempoResposta: tempoResposta,
+            pontos: isCorrect ? points : 0,
           });
+
+        console.log("📊 Resposta registrada no histórico");
       } catch (historyError) {
         console.warn("⚠️ Não foi possível salvar no histórico:", historyError);
       }
 
-      // CORREÇÃO: Desabilitar temporariamente as opções durante o feedback
+      // Desabilita opções após responder
       document.querySelectorAll(".option-btn").forEach((option) => {
+        option.classList.add("disabled");
         option.style.pointerEvents = "none";
       });
 
-      // Aguardar para o jogador ver o feedback
-      await new Promise((resolve) => setTimeout(resolve, 1500));
+      // Aguardar um pouco para o jogador ver o feedback
+      await new Promise((resolve) => setTimeout(resolve, 2000));
 
-      // CORREÇÃO: Resetar seleção
+      // Resetar seleção
       window.selectedOption = null;
       gameManager.selectedOption = null;
 
-      // Avançar para próxima pergunta
+      // Limpar classes de feedback
+      document.querySelectorAll(".option-btn").forEach((btn) => {
+        btn.classList.remove("correct", "incorrect", "selected");
+        const emoji = btn.querySelector(".feedback-emoji");
+        if (emoji) emoji.remove();
+        const pointsFeedback = btn.querySelector(".points-feedback");
+        if (pointsFeedback) pointsFeedback.remove();
+      });
+
+      // Restaurar texto do botão
+      if (submitButton) {
+        submitButton.textContent = "Confirmar Resposta";
+      }
+
+      // Avança LOCALMENTE para próxima pergunta
       await gameManager.advanceToNextRound();
     } catch (error) {
       console.error("❌ Erro ao enviar resposta:", error);
 
-      // CORREÇÃO: Re-habilitar interface em caso de erro
+      // Re-habilitar botão em caso de erro
       if (submitButton) {
         submitButton.disabled = false;
         submitButton.textContent = "Confirmar Resposta";
       }
 
+      // Re-habilitar opções em caso de erro
       document.querySelectorAll(".option-btn").forEach((option) => {
+        option.classList.remove("disabled");
         option.style.pointerEvents = "auto";
       });
 
@@ -293,22 +347,70 @@ class IdentifierManager {
     }
   }
 
-  // Calcular pontos
-  static calculatePoints(question) {
-    const basePoints = 100;
-    let difficulty = 1;
+  // 🎯 MÉTODO ATUALIZADO: Calcular pontos com decaimento por tempo
+  static calculatePoints(question, tempoResposta = null) {
+    try {
+      // 🎯 BASE: Usar pontuação base da pergunta ou calcular por dificuldade
+      let basePoints = 100; // fallback
 
-    if (question.dificuldade !== undefined) {
-      difficulty = question.dificuldade;
-    } else if (question.difficulty !== undefined) {
-      difficulty = question.difficulty;
-    } else if (question.nivel !== undefined) {
-      difficulty = question.nivel;
+      if (question.pontuacao_base !== undefined) {
+        basePoints = question.pontuacao_base;
+      } else {
+        // Calcular baseado na dificuldade se não tiver pontuação_base
+        let difficulty = 1;
+        if (question.dificuldade !== undefined) {
+          difficulty = question.dificuldade;
+        }
+
+        // Pontuação variada por dificuldade
+        const difficultyMultipliers = { 1: 1.0, 2: 2.5, 3: 4.0 };
+        const multiplier = difficultyMultipliers[difficulty] || 1.0;
+        basePoints = Math.floor(100 * multiplier);
+      }
+
+      // 🎯 DECAIMENTO POR TEMPO (se tempoResposta for fornecido)
+      let pontosFinais = basePoints;
+
+      if (tempoResposta !== null && tempoResposta > 0) {
+        // Reduzir pontos baseado no tempo de resposta (em segundos)
+        const decaimentoPorSegundo = 2; // Perde 2 pontos por segundo
+        const pontosPerdidos = Math.min(
+          tempoResposta * decaimentoPorSegundo,
+          basePoints * 0.7
+        ); // Máximo 70% de perda
+
+        pontosFinais = Math.max(basePoints - pontosPerdidos, basePoints * 0.3); // Mínimo 30% dos pontos
+
+        // 🎯 BÔNUS POR RAPIDEZ (resposta em menos de 5 segundos)
+        if (tempoResposta <= 5) {
+          const bonusRapidez = 50;
+          pontosFinais += bonusRapidez;
+          console.log("🚀 Bônus por rapidez!", bonusRapidez);
+        }
+
+        console.log("⏰ Cálculo com tempo:", {
+          basePoints,
+          tempoResposta,
+          pontosPerdidos,
+          pontosFinais,
+        });
+      }
+
+      // 🎯 ARREDONDAR E GARANTIR VALORES VÁLIDOS
+      pontosFinais = Math.max(10, Math.round(pontosFinais)); // Mínimo 10 pontos
+
+      console.log("💰 Pontos calculados:", {
+        basePoints,
+        tempoResposta,
+        pontosFinais,
+        questionId: question.id,
+        dificuldade: question.dificuldade,
+      });
+
+      return pontosFinais;
+    } catch (error) {
+      console.error("❌ Erro ao calcular pontos:", error);
+      return 100; // Fallback seguro
     }
-
-    difficulty = Number(difficulty) || 1;
-    const points = basePoints * difficulty;
-
-    return points;
   }
 }

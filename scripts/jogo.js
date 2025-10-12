@@ -804,6 +804,9 @@ class GameManager {
       return;
     }
 
+    // 🎯 REGISTRAR INÍCIO DA PERGUNTA PARA CALCULAR TEMPO DE RESPOSTA
+    this.questionStartTime = Date.now();
+
     if (!this.selectedQuestions || this.selectedQuestions.length === 0) {
       console.error("❌ Nenhuma pergunta disponível");
       this.showErrorState("Erro: Nenhuma pergunta disponível");
