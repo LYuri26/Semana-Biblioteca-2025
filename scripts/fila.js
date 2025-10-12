@@ -1,4 +1,4 @@
-// fila.js - VERSÃO COMPLETA E CORRIGIDA (PREVENÇÃO DE DUPLICAÇÃO)
+// fila.js - VERSÃO COMPLETA E CORRIGIDA (CÁLCULO DE POSIÇÃO + PREVENÇÃO DE DUPLICAÇÃO)
 
 class QueueManager {
   constructor() {
@@ -48,6 +48,10 @@ class QueueManager {
       this.listenForGameCreation();
       this.startPositionTracking();
       this.updateQueueStatus("Aguardando parceiro...");
+
+      // 🎯 CORREÇÃO: Verificação imediata da posição
+      setTimeout(() => this.forcePositionCheck(), 500);
+
       return true;
     }
 
@@ -73,6 +77,10 @@ class QueueManager {
       this.startPositionTracking();
       this.updateQueueStatus("Procurando parceiro...");
       this.startGameCheckInterval();
+
+      // 🎯 CORREÇÃO: Verificação imediata da posição
+      setTimeout(() => this.forcePositionCheck(), 1000);
+
       return true;
     } else {
       console.error("Falha ao entrar na fila");
@@ -144,21 +152,37 @@ class QueueManager {
     }
   }
 
-  // Iniciar tracking de posição na fila
+  // 🎯 MÉTODO CORRIGIDO: Iniciar tracking de posição na fila
   startPositionTracking() {
     this.positionCheckInterval = setInterval(async () => {
       if (!this.isLookingForMatch) return;
 
       try {
         const orderedQueue = await firebaseDB.getOrderedQueue();
+
+        // 🎯 CORREÇÃO: Verificar se a fila existe e tem jogadores
+        if (!orderedQueue || orderedQueue.length === 0) {
+          console.log("Fila vazia, parando tracking...");
+          this.stopPositionTracking();
+          this.updatePositionInfo(0, 0, null);
+          return;
+        }
+
         const playerInQueue = orderedQueue.find(
           (player) => player.id === this.playerId
         );
 
         if (playerInQueue) {
-          const position = playerInQueue.position;
+          // 🎯 CORREÇÃO: Usar índice real do array + 1 para posição
+          const position = orderedQueue.indexOf(playerInQueue) + 1;
           const papel = playerInQueue.papel;
           const totalPlayers = orderedQueue.length;
+
+          console.log(`📊 Posição calculada: ${position}/${totalPlayers}`, {
+            playerId: this.playerId,
+            queueSize: totalPlayers,
+            playerPosition: position,
+          });
 
           // Atualizar UI com informações de posição e papel
           this.updatePositionInfo(position, totalPlayers, papel);
@@ -166,9 +190,11 @@ class QueueManager {
           // Jogador não está mais na fila
           console.log("Jogador não encontrado na fila, parando tracking...");
           this.stopPositionTracking();
+          this.updatePositionInfo(0, 0, null);
         }
       } catch (error) {
         console.error("Erro ao verificar posição:", error);
+        this.updatePositionInfo(0, 0, null);
       }
     }, 2000);
   }
@@ -181,24 +207,50 @@ class QueueManager {
     }
   }
 
-  // Atualizar informações de posição na UI
+  // 🎯 MÉTODO CORRIGIDO: Atualizar informações de posição na UI
   updatePositionInfo(position, totalPlayers, papel) {
     const statusElement = document.getElementById("queueStatus");
     const positionElement =
       document.getElementById("positionInfo") || this.createPositionElement();
 
     if (statusElement && positionElement) {
+      // 🎯 CORREÇÃO: Validação de dados inconsistentes
+      if (position > totalPlayers) {
+        console.warn("⚠️ Inconsistência detectada: posição > total");
+        position = totalPlayers; // Corrigir para valor máximo possível
+      }
+
+      if (position === 0 || totalPlayers === 0) {
+        positionElement.innerHTML = `
+          <div style="text-align: center; margin: 10px 0; padding: 10px; background: rgba(255,255,255,0.1); border-radius: 8px;">
+            <div>Não está na fila</div>
+          </div>
+        `;
+        return;
+      }
+
       const proximoJogador =
-        position === 1 ? "Próximo" : `${position - 1} jogadores na frente`;
+        position === 1
+          ? "🎯 Próximo da fila!"
+          : `${position - 1} jogador(es) na frente`;
+
+      const papelDisplay = papel === "ouvinte" ? "🎧 Ouvinte" : "📖 Leitor";
+
       positionElement.innerHTML = `
         <div style="text-align: center; margin: 10px 0; padding: 10px; background: rgba(255,255,255,0.1); border-radius: 8px;">
           <div>Posição na fila: <strong>${position}º</strong> de ${totalPlayers}</div>
-          <div>Seu papel: <strong>${
-            papel === "ouvinte" ? "🎧 Ouvinte" : "📖 Leitor"
-          }</strong></div>
-          <div style="font-size: 0.9em; color: #ccc;">${proximoJogador}</div>
+          <div>Seu papel: <strong>${papelDisplay}</strong></div>
+          <div style="font-size: 0.9em; color: #ccc; margin-top: 5px;">${proximoJogador}</div>
         </div>
       `;
+
+      // 🎯 CORREÇÃO: Log para debug
+      console.log("UI Atualizada:", {
+        position,
+        totalPlayers,
+        papel,
+        proximoJogador,
+      });
     }
   }
 
@@ -382,25 +434,49 @@ class QueueManager {
     }
   }
 
-  // Obter informações detalhadas da fila
+  // 🎯 MÉTODO CORRIGIDO: Obter informações detalhadas da fila
   async getQueueDetails() {
     try {
       const orderedQueue = await firebaseDB.getOrderedQueue();
-      const playerPosition =
-        orderedQueue.findIndex((player) => player.id === this.playerId) + 1;
-      const playerData = orderedQueue.find(
+
+      // 🎯 CORREÇÃO: Verificar se a fila é válida
+      if (!orderedQueue || orderedQueue.length === 0) {
+        return {
+          position: 0,
+          total: 0,
+          papel: null,
+          queue: [],
+        };
+      }
+
+      const playerIndex = orderedQueue.findIndex(
         (player) => player.id === this.playerId
       );
 
+      // 🎯 CORREÇÃO: Se não encontrou, posição é 0
+      const position = playerIndex !== -1 ? playerIndex + 1 : 0;
+      const playerData = playerIndex !== -1 ? orderedQueue[playerIndex] : null;
+
+      console.log("📊 Detalhes da fila calculados:", {
+        position,
+        total: orderedQueue.length,
+        playerFound: playerIndex !== -1,
+      });
+
       return {
-        position: playerPosition,
+        position: position,
         total: orderedQueue.length,
         papel: playerData ? playerData.papel : null,
         queue: orderedQueue,
       };
     } catch (error) {
       console.error("Erro ao obter detalhes da fila:", error);
-      return null;
+      return {
+        position: 0,
+        total: 0,
+        papel: null,
+        queue: [],
+      };
     }
   }
 
@@ -419,7 +495,7 @@ class QueueManager {
     };
   }
 
-  // Método para debug - mostrar status completo
+  // 🎯 MÉTODO CORRIGIDO: Debug - mostrar status completo
   async debugStatus() {
     const status = await this.getPlayerStatus();
     const queueDetails = await this.getQueueDetails();
@@ -431,30 +507,71 @@ class QueueManager {
     console.log("Na fila:", status.inQueue);
     console.log("Buscando partida:", status.isLookingForMatch);
     console.log("Entrou na fila:", status.hasEnteredQueue);
-    console.log("Total na fila:", queueCount);
+    console.log("Total na fila (firebase):", queueCount);
+    console.log("Detalhes da fila (calculado):", queueDetails);
 
-    if (queueDetails) {
-      console.log(
-        "Posição na fila:",
-        queueDetails.position,
-        "de",
-        queueDetails.total
-      );
-      console.log("Papel:", queueDetails.papel);
+    // 🎯 CORREÇÃO: Verificar consistência entre os métodos
+    if (queueCount !== queueDetails.total) {
+      console.warn("⚠️ INCONSISTÊNCIA: queueCount !== queueDetails.total", {
+        queueCount,
+        queueDetailsTotal: queueDetails.total,
+      });
+    }
+
+    if (status.inQueue && queueDetails.position === 0) {
+      console.warn("⚠️ INCONSISTÊNCIA: inQueue=true mas position=0");
     }
 
     console.log("=== FIM DEBUG ===");
 
     return { status, queueDetails, queueCount };
   }
+
+  // 🎯 MÉTODO NOVO: Forçar verificação imediata da posição
+  async forcePositionCheck() {
+    try {
+      const orderedQueue = await firebaseDB.getOrderedQueue();
+
+      if (!orderedQueue || orderedQueue.length === 0) {
+        this.updatePositionInfo(0, 0, null);
+        return { position: 0, total: 0 };
+      }
+
+      const playerIndex = orderedQueue.findIndex(
+        (player) => player.id === this.playerId
+      );
+
+      if (playerIndex === -1) {
+        this.updatePositionInfo(0, 0, null);
+        return { position: 0, total: orderedQueue.length };
+      }
+
+      const position = playerIndex + 1;
+      const playerData = orderedQueue[playerIndex];
+
+      this.updatePositionInfo(position, orderedQueue.length, playerData.papel);
+
+      return {
+        position,
+        total: orderedQueue.length,
+        papel: playerData.papel,
+      };
+    } catch (error) {
+      console.error("Erro na verificação forçada:", error);
+      this.updatePositionInfo(0, 0, null);
+      return { position: 0, total: 0 };
+    }
+  }
 }
 
 // Instância global do gerenciador de fila
 const queueManager = new QueueManager();
 
-// Adicionar ao escopo global para debugging
+// 🎯 ADICIONAR FUNÇÃO GLOBAL PARA DEBUG
 if (typeof window !== "undefined") {
   window.queueManager = queueManager;
+  window.forcePositionCheck = () => queueManager.forcePositionCheck();
+  window.debugQueue = () => queueManager.debugStatus();
 }
 
 // CSS para os status (pode ser adicionado no CSS principal)

@@ -1,4 +1,4 @@
-// pareamento.js - VERSÃO COMPLETA CORRIGIDA
+// pareamento.js - VERSÃO CORRIGIDA (LIMPEZA DA FILA GARANTIDA)
 
 class MatchingSystem {
   constructor() {
@@ -51,14 +51,16 @@ class MatchingSystem {
 
       if (canPair) {
         console.log(`✅ PAR APROVADO, criando jogo com perguntas únicas...`);
-        const gameId = await this.createNewGameWithUniqueQuestions(
+        const gameCreated = await this.createNewGameWithUniqueQuestions(
           player1,
           player2
         );
 
-        if (gameId) {
-          console.log(`🎉 JOGO CRIADO: ${gameId}`);
-          console.log(`   👥 ${player1.nome} + ${player2.nome}`);
+        if (gameCreated) {
+          console.log(`🎉 JOGO CRIADO: ${player1.nome} + ${player2.nome}`);
+
+          // 🎯 LIMPEZA GARANTIDA DA FILA - MESMO EM CASO DE ERRO PARCIAL
+          await this.guaranteedQueueCleanup(player1.id, player2.id);
 
           const newQueueSize = orderedQueue.length - 2;
           console.log(`📊 FILA ATUAL: ${newQueueSize} jogador(es) restante(s)`);
@@ -66,6 +68,8 @@ class MatchingSystem {
           console.log(
             `❌ FALHA ao criar jogo para: ${player1.nome} + ${player2.nome}`
           );
+          // 🎯 LIMPEZA EM CASO DE FALHA
+          await this.guaranteedQueueCleanup(player1.id, player2.id);
         }
       }
     } catch (error) {
@@ -78,12 +82,45 @@ class MatchingSystem {
     }
   }
 
+  // 🎯 MÉTODO NOVO: LIMPEZA GARANTIDA DA FILA
+  async guaranteedQueueCleanup(player1Id, player2Id) {
+    console.log("🧹 Executando limpeza garantida da fila...");
+
+    const cleanupPromises = [];
+
+    // Tentar remover player1
+    cleanupPromises.push(
+      firebaseDB
+        .removePlayerFromQueue(player1Id)
+        .then(() => console.log(`✅ ${player1Id} removido da fila`))
+        .catch((error) =>
+          console.error(`❌ Erro ao remover ${player1Id}:`, error)
+        )
+    );
+
+    // Tentar remover player2
+    cleanupPromises.push(
+      firebaseDB
+        .removePlayerFromQueue(player2Id)
+        .then(() => console.log(`✅ ${player2Id} removido da fila`))
+        .catch((error) =>
+          console.error(`❌ Erro ao remover ${player2Id}:`, error)
+        )
+    );
+
+    // Aguardar todas as operações de limpeza
+    await Promise.allSettled(cleanupPromises);
+    console.log("✅ Limpeza da fila concluída");
+  }
+
   // 🎯 MÉTODO CORRIGIDO: Criar jogo com perguntas únicas
   async createNewGameWithUniqueQuestions(player1, player2) {
+    let gameCreated = false;
+
     try {
       console.log(`🎲 Gerando perguntas únicas para nova dupla...`);
 
-      // 🎯 CARREGAR PERGUNTAS DO JSON DIRETAMENTE (sem QuestionManager)
+      // 🎯 CARREGAR PERGUNTAS DO JSON DIRETAMENTE
       const response = await fetch("arquivos/dados/perguntas.json");
       if (!response.ok) throw new Error("Erro ao carregar perguntas");
 
@@ -123,7 +160,6 @@ class MatchingSystem {
               : 0,
           dica: question.dica || "",
           imagem: question.imagem || "",
-          // 🎯 ADICIONAR OPÇÕES PREPARADAS
           displayOptions: optionsData.options,
           correctDisplayIndex: optionsData.correctIndex,
         };
@@ -160,7 +196,6 @@ class MatchingSystem {
             tempoRespostas: {},
           },
         },
-        // 🎯 SALVAR PERGUNTAS NO JOGO
         perguntas: preparedQuestions,
         currentQuestionIndex: 0,
         status: "ativo",
@@ -183,14 +218,12 @@ class MatchingSystem {
         .ref(`birdbox/players/${player2.id}/currentGame`)
         .set(gameId);
 
-      // 🎯 REMOVER DA FILA
-      await firebaseDB.removePlayerFromQueue(player1.id);
-      await firebaseDB.removePlayerFromQueue(player2.id);
-
       console.log(
         `🎉 JOGO CRIADO: ${gameId} com ${preparedQuestions.length} perguntas únicas`
       );
-      return gameId;
+
+      gameCreated = true;
+      return gameCreated;
     } catch (error) {
       console.error("❌ ERRO ao criar jogo com perguntas únicas:", error);
 
@@ -203,15 +236,17 @@ class MatchingSystem {
           player2.id,
           player2
         );
-        return gameId;
+        gameCreated = true;
+        return gameCreated;
       } catch (fallbackError) {
         console.error("❌ ERRO no fallback também:", fallbackError);
-        return null;
+        gameCreated = false;
+        return gameCreated;
       }
     }
   }
 
-  // 🎯 MÉTODO: Preparar opções de perguntas
+  // 🎯 MÉTODO: Preparar opções de perguntas (mantido igual)
   prepareQuestionOptions(question, wrongOptionsPool) {
     try {
       const options = [];
@@ -221,7 +256,6 @@ class MatchingSystem {
 
       const totalOptions = 4;
 
-      // Filtrar opções erradas
       const filteredWrongOptions = wrongOptionsPool.filter(
         (opt) =>
           opt !== correctAnswer &&
@@ -230,7 +264,6 @@ class MatchingSystem {
           opt.trim() !== ""
       );
 
-      // Se não houver opções erradas suficientes, usar algumas das outras opções da pergunta
       let availableWrongOptions = [...filteredWrongOptions];
       if (availableWrongOptions.length < totalOptions - 1) {
         const otherQuestionOptions = (question.opcoes || []).filter(
@@ -242,13 +275,11 @@ class MatchingSystem {
         ];
       }
 
-      // Se ainda não tiver opções suficientes, criar opções padrão
       if (availableWrongOptions.length < totalOptions - 1) {
         const defaultOptions = ["Opção A", "Opção B", "Opção C", "Opção D"];
         availableWrongOptions = [...availableWrongOptions, ...defaultOptions];
       }
 
-      // Embaralhar e pegar opções necessárias
       const shuffledWrongOptions = this.shuffleArray(availableWrongOptions);
       const neededWrongOptions = shuffledWrongOptions.slice(
         0,
@@ -256,15 +287,12 @@ class MatchingSystem {
       );
       options.push(...neededWrongOptions);
 
-      // Embaralhar todas as opções
       const shuffledOptions = this.shuffleArray(options);
 
-      // Obter índice da resposta correta
       const correctIndex = shuffledOptions.findIndex(
         (opt) => opt === correctAnswer
       );
 
-      // Garantir que temos uma resposta correta válida
       const finalCorrectIndex = correctIndex !== -1 ? correctIndex : 0;
 
       return {
@@ -273,7 +301,6 @@ class MatchingSystem {
       };
     } catch (error) {
       console.error("❌ Erro ao preparar opções:", error);
-      // Fallback básico
       return {
         options: ["Opção A", "Opção B", "Opção C", "Opção D"],
         correctIndex: 0,
@@ -281,7 +308,7 @@ class MatchingSystem {
     }
   }
 
-  // 🎯 MÉTODO: Embaralhar array
+  // 🎯 MÉTODO: Embaralhar array (mantido igual)
   shuffleArray(array) {
     const newArray = [...array];
     for (let i = newArray.length - 1; i > 0; i--) {
@@ -301,6 +328,11 @@ class MatchingSystem {
 
       if (!player1InQueue || !player2InQueue) {
         console.log("❌ Um ou ambos os jogadores saíram da fila");
+
+        // 🎯 LIMPEZA IMEDIATA SE ALGUÉM SAIU
+        if (player1InQueue) await firebaseDB.removePlayerFromQueue(player1Id);
+        if (player2InQueue) await firebaseDB.removePlayerFromQueue(player2Id);
+
         return false;
       }
 
@@ -310,9 +342,11 @@ class MatchingSystem {
 
       if (player1InGame || player2InGame) {
         console.log("❌ Um ou ambos os jogadores já estão em jogo");
-        // Limpar jogadores problemáticos
+
+        // 🎯 LIMPEZA IMEDIATA
         if (player1InGame) await firebaseDB.removePlayerFromQueue(player1Id);
         if (player2InGame) await firebaseDB.removePlayerFromQueue(player2Id);
+
         return false;
       }
 
