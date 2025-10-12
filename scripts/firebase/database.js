@@ -117,6 +117,7 @@ class FirebaseDatabase {
     }
   }
 
+  // NOVA VERSÃO CORRIGIDA - database.js
   async isPlayerInActiveGame(playerId) {
     try {
       const gameIdSnapshot = await this.db
@@ -130,12 +131,25 @@ class FirebaseDatabase {
           .once("value");
         const gameData = gameSnapshot.val();
 
-        return gameData && gameData.status === "ativo";
+        // VERIFICAÇÃO MAIS PRECISA - considerar apenas jogos realmente ativos
+        if (gameData && gameData.status === "ativo") {
+          console.log(
+            `⚠️ Jogador ${playerId} já está no jogo ativo: ${gameId}`
+          );
+          return true;
+        } else {
+          // Se o jogo não existe ou não está ativo, limpar a referência
+          console.log(
+            `🧹 Limpando referência de jogo inválida para ${playerId}`
+          );
+          await this.db.ref(`birdbox/players/${playerId}/currentGame`).remove();
+          return false;
+        }
       }
       return false;
     } catch (error) {
       console.error("Erro ao verificar jogo ativo:", error);
-      return false;
+      return false; // Em caso de erro, assumir que não está em jogo
     }
   }
 
