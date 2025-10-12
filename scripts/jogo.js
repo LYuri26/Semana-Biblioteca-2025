@@ -200,9 +200,10 @@ class GameManager {
     console.log("📖 Todas as perguntas carregadas:", this.questions.length);
   }
 
-  // Determinar o papel do jogador
+  // Determinar o papel do jogador - VERSÃO CORRIGIDA
   async determinePlayerRole() {
     try {
+      // Primeiro verificar se já tem um papel definido
       const snapshot = await firebaseDB.db
         .ref(`birdbox/games/${this.gameId}/jogadores/${this.playerId}/papel`)
         .once("value");
@@ -210,7 +211,7 @@ class GameManager {
       this.playerRole = snapshot.val();
 
       if (!this.playerRole) {
-        console.log("Papel não definido, determinando automaticamente...");
+        console.log("🎭 Papel não definido, determinando automaticamente...");
 
         const gameSnapshot = await firebaseDB.db
           .ref(`birdbox/games/${this.gameId}/jogadores`)
@@ -220,41 +221,64 @@ class GameManager {
         let ouvintesCount = 0;
         let adivinhadoresCount = 0;
 
+        // Contar papéis existentes CORRETAMENTE
         if (players) {
-          Object.keys(players).forEach((playerId) => {
-            if (players[playerId].papel === "ouvinte") {
+          Object.values(players).forEach((playerData) => {
+            if (playerData.papel === "ouvinte") {
               ouvintesCount++;
-            } else if (players[playerId].papel === "adivinhador") {
+            } else if (playerData.papel === "adivinhador") {
               adivinhadoresCount++;
             }
           });
         }
 
         console.log(
-          `Ouvintes: ${ouvintesCount}, Adivinhadores: ${adivinhadoresCount}`
+          `📊 Papéis existentes - Ouvintes: ${ouvintesCount}, Adivinhadores: ${adivinhadoresCount}`
         );
 
+        // LÓGICA CORRIGIDA: Garantir que tenha um de cada
         if (ouvintesCount === 0) {
           this.playerRole = "ouvinte";
+          console.log("🎧 Atribuindo papel: ouvinte (primeiro da dupla)");
         } else if (adivinhadoresCount === 0) {
           this.playerRole = "adivinhador";
+          console.log("🔍 Atribuindo papel: adivinhador (segundo da dupla)");
         } else {
-          this.playerRole =
-            ouvintesCount <= adivinhadoresCount ? "ouvinte" : "adivinhador";
+          // Se por algum motivo já tem dois, usar fallback seguro
+          this.playerRole = Math.random() > 0.5 ? "ouvinte" : "adivinhador";
+          console.log(
+            "🎲 Usando fallback aleatório para papel:",
+            this.playerRole
+          );
         }
 
-        console.log("Papel atribuído:", this.playerRole);
+        console.log("✅ Papel final atribuído:", this.playerRole);
 
+        // Salvar o papel no Firebase
         await firebaseDB.db
           .ref(`birdbox/games/${this.gameId}/jogadores/${this.playerId}/papel`)
           .set(this.playerRole);
+      } else {
+        console.log("✅ Papel já definido:", this.playerRole);
       }
 
-      console.log("Papel final do jogador:", this.playerRole);
+      return this.playerRole;
     } catch (error) {
-      console.error("Erro ao determinar papel:", error);
+      console.error("❌ Erro ao determinar papel:", error);
+      // Fallback seguro
       this.playerRole = Math.random() > 0.5 ? "ouvinte" : "adivinhador";
-      console.log("Usando fallback para papel:", this.playerRole);
+      console.log("🔄 Usando fallback devido a erro:", this.playerRole);
+
+      // Tentar salvar o fallback
+      try {
+        await firebaseDB.db
+          .ref(`birdbox/games/${this.gameId}/jogadores/${this.playerId}/papel`)
+          .set(this.playerRole);
+      } catch (e) {
+        console.error("❌ Erro ao salvar fallback:", e);
+      }
+
+      return this.playerRole;
     }
   }
 

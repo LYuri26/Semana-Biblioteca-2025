@@ -127,6 +127,49 @@ class MatchingSystem {
     }
   }
 
+  // Função para corrigir papeis duplicados (adicionar no MatchingSystem)
+  async fixDuplicateRoles(gameId) {
+    try {
+      const gameSnapshot = await firebaseDB.db
+        .ref(`birdbox/games/${gameId}/jogadores`)
+        .once("value");
+      const players = gameSnapshot.val();
+
+      if (!players) return;
+
+      const playerIds = Object.keys(players);
+      let ouvintesCount = 0;
+      let adivinhadoresCount = 0;
+
+      // Contar papeis atuais
+      playerIds.forEach((playerId) => {
+        if (players[playerId].papel === "ouvinte") ouvintesCount++;
+        if (players[playerId].papel === "adivinhador") adivinhadoresCount++;
+      });
+
+      console.log(
+        `🔧 Verificando papeis - Ouvintes: ${ouvintesCount}, Adivinhadores: ${adivinhadoresCount}`
+      );
+
+      // Corrigir se necessário
+      if (ouvintesCount === 2) {
+        // Mudar um para adivinhador
+        await firebaseDB.db
+          .ref(`birdbox/games/${gameId}/jogadores/${playerIds[0]}/papel`)
+          .set("adivinhador");
+        console.log("✅ Corrigido: Jogador 1 definido como adivinhador");
+      } else if (adivinhadoresCount === 2) {
+        // Mudar um para ouvinte
+        await firebaseDB.db
+          .ref(`birdbox/games/${gameId}/jogadores/${playerIds[0]}/papel`)
+          .set("ouvinte");
+        console.log("✅ Corrigido: Jogador 1 definido como ouvinte");
+      }
+    } catch (error) {
+      console.error("❌ Erro ao corrigir papeis:", error);
+    }
+  }
+
   async updatePlayersWithGameId(player1Id, player2Id, gameId) {
     try {
       // Salvar o gameId para os jogadores acessarem
