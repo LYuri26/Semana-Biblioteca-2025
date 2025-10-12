@@ -42,15 +42,16 @@ class GameManager {
   // Inicializar o jogo
   async initGame(gameId) {
     this.gameId = gameId;
-    console.log("Iniciando jogo com ID:", gameId);
+    console.log("🎮 Iniciando jogo com ID:", gameId);
 
     try {
       // Primeiro determinar o papel do jogador
       await this.determinePlayerRole();
-      console.log("Papel do jogador determinado:", this.playerRole);
+      console.log("🎭 Papel do jogador determinado:", this.playerRole);
 
       // Carregar perguntas (agora sem fallback)
       await this.loadQuestions();
+      console.log("📚 Perguntas carregadas:", this.selectedQuestions.length);
 
       // Resto do código permanece igual...
       this.initializeUI();
@@ -58,14 +59,14 @@ class GameManager {
       this.startGameTimer();
 
       if (this.playerRole === "ouvinte") {
-        console.log("Ouvinte - preparando primeira pergunta");
+        console.log("🎧 Ouvinte - preparando primeira pergunta");
         await firebaseDB.db
           .ref(`birdbox/games/${this.gameId}/currentRound`)
           .set(1);
         await this.loadNextQuestion();
       } else {
-        console.log("Adivinhador - aguardando pergunta");
-        // Verificar se já existe uma pergunta em andamento
+        console.log("🔍 Adivinhador - verificando estado atual do jogo");
+
         const questionSnapshot = await firebaseDB.db
           .ref(`birdbox/games/${this.gameId}/currentQuestion`)
           .once("value");
@@ -76,19 +77,33 @@ class GameManager {
           .once("value");
         const currentRound = roundSnapshot.val();
 
+        console.log("📊 Estado inicial do jogo:", {
+          currentQuestionId,
+          currentRound,
+          totalRounds: this.totalRounds,
+          questionsDisponiveis: this.questions.length,
+          selectedQuestions: this.selectedQuestions.map((q) => q.id),
+        });
+
         if (currentRound) {
           this.currentRound = currentRound;
           this.updateRoundDisplay();
+          console.log("🔄 Rodada definida para:", this.currentRound);
         }
 
         if (currentQuestionId) {
+          console.log("🔄 Carregando pergunta existente...", currentQuestionId);
           await this.loadQuestionForIdentifier(currentQuestionId);
+        } else {
+          console.log("⏳ Nenhuma pergunta ativa - aguardando ouvinte");
+          IdentifierManager.showWaitingState();
         }
       }
 
       this.hideLoadingScreen();
+      console.log("✅ Jogo inicializado com sucesso!");
     } catch (error) {
-      console.error("Erro ao inicializar jogo:", error);
+      console.error("❌ Erro ao inicializar jogo:", error);
       alert(
         "Erro ao carregar as perguntas. Verifique se o arquivo perguntas.json existe e está no formato correto."
       );
@@ -324,22 +339,48 @@ class GameManager {
   // Carregar pergunta para adivinhador
   async loadQuestionForIdentifier(questionId) {
     try {
-      this.currentQuestion = this.questions.find((q) => q.id === questionId);
-      if (this.currentQuestion) {
-        const preparedOptions = QuestionManager.prepareQuestionOptions(
-          this.currentQuestion,
-          this.wrongOptionsPool
-        );
-        this.currentQuestion.displayOptions = preparedOptions.options;
-        this.currentQuestion.correctDisplayIndex = preparedOptions.correctIndex;
-        IdentifierManager.updateOptions(this.currentQuestion);
-        this.updateRoundDisplay();
+      console.log("🔄 Adivinhador: Carregando pergunta ID:", questionId);
 
-        // HABILITAR OPÇÕES IMEDIATAMENTE
-        IdentifierManager.enableAnswerOptions();
+      // Encontrar a pergunta no array de perguntas
+      this.currentQuestion = this.questions.find((q) => q.id === questionId);
+
+      if (!this.currentQuestion) {
+        console.error("❌ Pergunta não encontrada no array local:", questionId);
+        console.log(
+          "📋 Perguntas disponíveis:",
+          this.questions.map((q) => ({ id: q.id, pergunta: q.pergunta }))
+        );
+        IdentifierManager.showWaitingState();
+        return;
       }
+
+      console.log("✅ Pergunta carregada:", {
+        id: this.currentQuestion.id,
+        pergunta: this.currentQuestion.pergunta,
+        som: this.currentQuestion.som,
+      });
+
+      const preparedOptions = QuestionManager.prepareQuestionOptions(
+        this.currentQuestion,
+        this.wrongOptionsPool
+      );
+      this.currentQuestion.displayOptions = preparedOptions.options;
+      this.currentQuestion.correctDisplayIndex = preparedOptions.correctIndex;
+
+      console.log("📝 Opções preparadas:", {
+        options: preparedOptions.options,
+        correctIndex: preparedOptions.correctIndex,
+      });
+
+      IdentifierManager.updateOptions(this.currentQuestion);
+      this.updateRoundDisplay();
+
+      // HABILITAR OPÇÕES IMEDIATAMENTE
+      IdentifierManager.enableAnswerOptions();
+      console.log("🎯 Opções habilitadas para resposta");
     } catch (error) {
-      console.error("Erro ao carregar pergunta:", error);
+      console.error("❌ Erro ao carregar pergunta:", error);
+      IdentifierManager.showWaitingState();
     }
   }
 
@@ -348,9 +389,15 @@ class GameManager {
     if (this.currentRound <= this.totalRounds) {
       this.currentQuestion = this.selectedQuestions[this.currentRound - 1];
 
+      console.log("🎧 Ouvinte carregando pergunta:", {
+        round: this.currentRound,
+        questionId: this.currentQuestion.id,
+        pergunta: this.currentQuestion.pergunta,
+      });
+
       // APENAS O OUVINTE ATUALIZA A PERGUNTA NO FIREBASE
-      // jogo.js → dentro de loadQuestionForCurrentRound()
       if (this.playerRole === "ouvinte") {
+        console.log("📤 Enviando pergunta para Firebase...");
         await firebaseDB.db
           .ref(`birdbox/games/${this.gameId}/currentRound`)
           .set(this.currentRound);
@@ -358,6 +405,8 @@ class GameManager {
         await firebaseDB.db
           .ref(`birdbox/games/${this.gameId}/currentQuestion`)
           .set(this.currentQuestion.id);
+
+        console.log("✅ Pergunta enviada para Firebase");
       }
 
       const preparedOptions = QuestionManager.prepareQuestionOptions(
@@ -380,30 +429,33 @@ class GameManager {
 
     // APENAS O ADIVINHADOR AVANÇA ATRAVÉS DESTE MÉTODO
     if (this.playerRole === "adivinhador") {
-      if (this.currentRound < this.totalRounds) {
-        this.currentRound++;
-        await firebaseDB.db
-          .ref(`birdbox/games/${this.gameId}/currentRound`)
-          .set(this.currentRound);
+      this.questionListener = firebaseDB.db
+        .ref(`birdbox/games/${this.gameId}/currentQuestion`)
+        .on("value", async (snapshot) => {
+          const questionId = snapshot.val();
+          console.log("📥 Adivinhador recebeu questionId:", questionId);
 
-        this.updateRoundDisplay();
-        IdentifierManager.resetAnswerInterface();
+          if (questionId) {
+            await this.loadQuestionForIdentifier(questionId);
+          } else {
+            console.log("⏳ Aguardando pergunta do ouvinte...");
+            IdentifierManager.showWaitingState();
+          }
+        });
 
-        // CARREGAR NOVA PERGUNTA APÓS AVANÇAR
-        const questionSnapshot = await firebaseDB.db
-          .ref(`birdbox/games/${this.gameId}/currentQuestion`)
-          .once("value");
-        const currentQuestionId = questionSnapshot.val();
-
-        if (currentQuestionId) {
-          await this.loadQuestionForIdentifier(currentQuestionId);
-        }
-      } else {
-        this.currentRound = this.totalRounds;
-        this.updateRoundDisplay();
-      }
+      // APENAS O ADIVINHADOR SINCRONIZA RODADA COM FIREBASE
+      this.roundListener = firebaseDB.db
+        .ref(`birdbox/games/${this.gameId}/currentRound`)
+        .on("value", (snapshot) => {
+          const round = snapshot.val();
+          console.log("📥 Adivinhador recebeu round:", round);
+          if (round && round !== this.currentRound) {
+            this.currentRound = round;
+            this.updateRoundDisplay();
+            IdentifierManager.resetAnswerInterface();
+          }
+        });
     }
-
     setTimeout(() => {
       this.isAdvancing = false;
     }, 100);

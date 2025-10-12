@@ -127,17 +127,58 @@ class IdentifierManager {
     window.selectedOption = parseInt(optionElement.dataset.option);
   }
 
+  static showWaitingState() {
+    const options = document.querySelectorAll(".option-btn");
+    const submitButton = document.getElementById("submitAnswer");
+    const descElement = document.getElementById("partnerDescription");
+
+    if (descElement) {
+      descElement.textContent = "Aguardando pergunta do ouvinte...";
+      descElement.classList.remove("active");
+    }
+
+    options.forEach((option, index) => {
+      const optionText = option.querySelector(".option-text");
+      if (optionText) optionText.textContent = "Aguardando...";
+      option.classList.add("disabled");
+      option.classList.remove("selected", "correct", "incorrect");
+    });
+
+    if (submitButton) {
+      submitButton.disabled = true;
+    }
+
+    window.selectedOption = null;
+
+    console.log("⏳ Adivinhador em estado de espera - aguardando pergunta");
+  }
+
   // Submeter resposta
   static async submitAnswer(gameManager) {
+    // VERIFICAÇÃO CRÍTICA - garantir que temos uma pergunta
+    if (!gameManager.currentQuestion) {
+      console.error("❌ Erro: currentQuestion é null");
+      alert("Aguarde a pergunta ser carregada antes de responder.");
+      return;
+    }
+
     if (window.selectedOption === null) {
       alert("Selecione uma opção antes de confirmar.");
       return;
     }
 
     try {
+      console.log("📝 Submetendo resposta...", {
+        selectedOption: window.selectedOption,
+        correctIndex: gameManager.currentQuestion.correctDisplayIndex,
+        question: gameManager.currentQuestion.pergunta,
+      });
+
       const isCorrect =
         window.selectedOption ===
         gameManager.currentQuestion.correctDisplayIndex;
+
+      console.log("✅ Resposta correta?", isCorrect);
 
       if (isCorrect) {
         const points = IdentifierManager.calculatePoints(
@@ -151,6 +192,8 @@ class IdentifierManager {
             `birdbox/games/${gameManager.gameId}/jogadores/${gameManager.playerId}/pontuacao`
           )
           .set(gameManager.score);
+
+        console.log("🎯 Pontos adicionados:", points);
       }
 
       // Desabilita opções após responder
@@ -162,9 +205,9 @@ class IdentifierManager {
       if (submitButton) submitButton.disabled = true;
 
       // Avança **somente o próprio jogador**
-      gameManager.advanceToNextRound();
+      await gameManager.advanceToNextRound();
     } catch (error) {
-      console.error("Erro ao enviar resposta:", error);
+      console.error("❌ Erro ao enviar resposta:", error);
     }
   }
 

@@ -48,6 +48,10 @@ class ListenerManager {
     if (nextButton) {
       nextButton.addEventListener("click", () => {
         if (gameManager.currentRound < gameManager.totalRounds) {
+          console.log(
+            "➡️ Ouvinte avançando para rodada:",
+            gameManager.currentRound + 1
+          );
           gameManager.currentRound++;
           gameManager.updateRoundDisplay();
           gameManager.loadQuestionForCurrentRound();
