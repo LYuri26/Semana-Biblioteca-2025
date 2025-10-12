@@ -1,4 +1,4 @@
-// Gerenciador principal do jogo BirdBox
+// Gerenciador principal do jogo BirdBox - VERSÃO COMPLETA E CORRIGIDA
 // Variáveis de controle
 
 let inactivityTimer = null;
@@ -21,42 +21,46 @@ class GameManager {
     this.gameState = "loading";
     this.selectedOption = null;
     this.audioPlayer = null;
+    this.isAdvancing = false;
+
+    // Listeners do Firebase
+    this.questionsSyncListener = null;
     this.gameListener = null;
-    this.descriptionListener = null;
-    this.roundListener = null;
-    this.questionListener = null;
     this.playersListener = null;
+    this.roundListener = null;
+    this.descriptionListener = null;
+    this.gameFinishedListener = null;
+    this.questionsListener = null;
   }
 
-  async checkAndAdvanceRound() {
-    // Apenas este jogador avança, independente do parceiro
-    await firebaseDB.db
-      .ref(
-        `birdbox/games/${this.gameId}/jogadores/${this.playerId}/readyForNextRound`
-      )
-      .set(false);
-
-    this.advanceToNextRound();
-  }
-
-  // Inicializar o jogo
+  // Inicializar o jogo - VERSÃO COMPLETA CORRIGIDA
   async initGame(gameId) {
     this.gameId = gameId;
     console.log("🎮 Iniciando jogo com ID:", gameId);
 
     try {
-      // Primeiro determinar o papel do jogador
+      // 🎯 PRIMEIRO: Debug da estrutura do jogo no Firebase
+      await this.debugGameStructure();
+
+      // Determinar o papel do jogador
       await this.determinePlayerRole();
       console.log("🎭 Papel do jogador determinado:", this.playerRole);
 
-      // Carregar todas as perguntas disponíveis
+      // 🎯 CARREGAR PERGUNTAS ÚNICAS DA DUPLA
       await this.loadAllQuestions();
-      console.log("📚 Todas as perguntas carregadas:", this.questions.length);
 
-      // SINCRONIZAR AS PERGUNTAS SELECIONADAS PARA A DUPLA
-      await this.syncSelectedQuestions();
+      // 🎯 VERIFICAR E FORÇAR SINCRONIZAÇÃO SE NECESSÁRIO
+      const isSynchronized = await this.verifyQuestionsSynchronization();
+      if (!isSynchronized) {
+        console.warn(
+          "⚠️ Problema de sincronização detectado, forçando sincronização..."
+        );
+        await this.forceQuestionsSynchronization();
+      }
+
+      await this.debugQuestionStructure();
       console.log(
-        "🔄 Perguntas sincronizadas para a dupla:",
+        "📚 Pacote de perguntas da dupla carregado:",
         this.selectedQuestions.length
       );
 
@@ -94,110 +98,316 @@ class GameManager {
     } catch (error) {
       console.error("❌ Erro ao inicializar jogo:", error);
       alert(
-        "Erro ao carregar as perguntas. Verifique se o arquivo perguntas.json existe e está no formato correto."
+        "Erro ao carregar o jogo. Verifique sua conexão e tente novamente."
       );
       window.location.href = "index.html";
     }
   }
 
-  // Sincronizar as perguntas selecionadas para a dupla
-  async syncSelectedQuestions() {
+  // 🎯 MÉTODO NOVO: Debug avançado da estrutura do jogo
+  async debugGameStructure() {
     try {
-      console.log("🔄 Sincronizando perguntas para a dupla...");
+      console.log("🔍 DEBUG AVANÇADO - Estrutura completa do jogo:");
 
-      // VERIFICAR ESTRUTURA DAS PERGUNTAS
-      console.log("🔍 Estrutura da primeira pergunta:", this.questions[0]);
-
-      console.log("🔄 Sincronizando perguntas para a dupla...");
-
-      // Verificar se já existe uma seleção de perguntas no Firebase
-      const questionsSnapshot = await firebaseDB.db
-        .ref(`birdbox/games/${this.gameId}/selectedQuestions`)
+      const gameSnapshot = await firebaseDB.db
+        .ref(`birdbox/games/${this.gameId}`)
         .once("value");
 
-      const existingQuestions = questionsSnapshot.val();
+      const gameData = gameSnapshot.val();
 
-      if (existingQuestions && existingQuestions.length > 0) {
-        // Já existe uma seleção - usar a mesma
-        console.log(
-          "📋 Usando perguntas já selecionadas no Firebase:",
-          existingQuestions
-        );
+      if (gameData) {
+        console.log("📊 Dados do jogo no Firebase:", {
+          id: gameData.id,
+          status: gameData.status,
+          totalPerguntas: gameData.perguntas ? gameData.perguntas.length : 0,
+          totalJogadores: gameData.jogadores
+            ? Object.keys(gameData.jogadores).length
+            : 0,
+          jogadores: gameData.jogadores ? Object.keys(gameData.jogadores) : [],
+        });
 
-        // Encontrar as perguntas completas baseadas nos IDs
-        this.selectedQuestions = existingQuestions
-          .map((questionId) => this.questions.find((q) => q.id === questionId))
-          .filter((q) => q !== undefined);
-
-        console.log(
-          "✅ Perguntas recuperadas do Firebase:",
-          this.selectedQuestions.map((q) => q.id)
-        );
+        if (gameData.perguntas) {
+          console.log("📋 PERGUNTAS NO FIREBASE:");
+          gameData.perguntas.forEach((q, i) => {
+            console.log(`  ${i + 1}.`, {
+              id: q.id,
+              pergunta: q.pergunta,
+              som: q.som,
+              opcoes: q.opcoes ? q.opcoes.length : 0,
+              resposta: q.resposta_correta,
+            });
+          });
+        } else {
+          console.error(
+            "❌ NENHUMA PERGUNTA NO FIREBASE - PROBLEMA NO PAREAMENTO!"
+          );
+        }
       } else {
-        // Primeiro jogador - criar nova seleção
-        console.log("🎲 Primeiro jogador - criando nova seleção de perguntas");
-
-        // Selecionar 4 perguntas aleatórias
-        const shuffled = Utils.shuffleArray([...this.questions]);
-        this.selectedQuestions = shuffled.slice(0, this.totalRounds);
-
-        console.log(
-          "📝 Novas perguntas selecionadas:",
-          this.selectedQuestions.map((q) => q.id)
-        );
-
-        // Salvar no Firebase para o outro jogador usar
-        const questionIds = this.selectedQuestions.map((q) => q.id);
-        await firebaseDB.db
-          .ref(`birdbox/games/${this.gameId}/selectedQuestions`)
-          .set(questionIds);
-
-        console.log("💾 Perguntas salvas no Firebase para sincronização");
+        console.error("❌ Jogo não encontrado no Firebase!");
       }
-
-      // Garantir que temos exatamente 4 perguntas
-      if (this.selectedQuestions.length !== this.totalRounds) {
-        console.error(
-          "❌ Número incorreto de perguntas selecionadas:",
-          this.selectedQuestions.length
-        );
-        // Fallback: usar as primeiras 4 perguntas
-        this.selectedQuestions = this.questions.slice(0, this.totalRounds);
-        console.log(
-          "🔄 Usando fallback:",
-          this.selectedQuestions.map((q) => q.id)
-        );
-      }
-
-      console.log(
-        "🎯 Perguntas finais sincronizadas:",
-        this.selectedQuestions.map((q) => ({
-          id: q.id,
-          pergunta: q.pergunta,
-          som: q.som,
-        }))
-      );
     } catch (error) {
-      console.error("❌ Erro ao sincronizar perguntas:", error);
-      // Fallback: selecionar perguntas localmente
-      const shuffled = Utils.shuffleArray([...this.questions]);
-      this.selectedQuestions = shuffled.slice(0, this.totalRounds);
-      console.log(
-        "🔄 Usando fallback local devido a erro:",
-        this.selectedQuestions.map((q) => q.id)
-      );
+      console.error("❌ Erro no debug:", error);
     }
   }
 
-  // Carregar todas as perguntas disponíveis
+  // 🎯 MÉTODO CORRIGIDO: Carregar perguntas únicas da dupla
   async loadAllQuestions() {
-    const questionData = await QuestionManager.loadQuestions();
-    this.questions = questionData.questions;
-    this.wrongOptionsPool = questionData.wrongOptionsPool;
-    this.totalRounds = questionData.totalRounds;
-    this.totalTime = questionData.totalTime;
+    try {
+      console.log("🎯 Buscando perguntas únicas para esta dupla...");
 
-    console.log("📖 Todas as perguntas carregadas:", this.questions.length);
+      // 🎯 BUSCAR DADOS COMPLETOS DO JOGO
+      const gameSnapshot = await firebaseDB.db
+        .ref(`birdbox/games/${this.gameId}`)
+        .once("value");
+
+      const gameData = gameSnapshot.val();
+
+      if (gameData && gameData.perguntas && gameData.perguntas.length > 0) {
+        console.log(
+          "✅ Perguntas únicas da dupla encontradas:",
+          gameData.perguntas.length
+        );
+
+        // 🎯 USAR AS PERGUNTAS ESPECÍFICAS DESTA DUPLA
+        this.selectedQuestions = gameData.perguntas;
+        this.questions = gameData.perguntas;
+        this.totalRounds = gameData.perguntas.length;
+
+        // 🎯 CORRIGIR ESTRUTURA DAS PERGUNTAS SE NECESSÁRIO
+        this.fixQuestionStructure();
+
+        // Carregar pool de opções erradas
+        await this.loadWrongOptionsPool();
+
+        console.log(
+          "🎉 Dupla sincronizada com",
+          this.selectedQuestions.length,
+          "perguntas únicas"
+        );
+      } else {
+        // FALLBACK: se não encontrar perguntas no Firebase
+        console.warn(
+          "🔄 Nenhuma pergunta específica da dupla encontrada, usando fallback"
+        );
+        await this.loadFallbackQuestions();
+      }
+    } catch (error) {
+      console.error("❌ Erro ao carregar perguntas da dupla:", error);
+      await this.loadFallbackQuestions();
+    }
+  }
+
+  // 🎯 MÉTODO NOVO: Corrigir estrutura das perguntas
+  fixQuestionStructure() {
+    console.log("🔍 Corrigindo estrutura das perguntas...");
+
+    this.selectedQuestions.forEach((question, index) => {
+      // Corrigir campo 'pergunta' se estiver undefined
+      if (!question.pergunta || question.pergunta === undefined) {
+        if (
+          question.opcoes &&
+          question.opcoes.length > 0 &&
+          question.resposta_correta !== undefined
+        ) {
+          question.pergunta = `Identifique o som: ${
+            question.opcoes[question.resposta_correta]
+          }`;
+          console.log(`🔄 Corrigido pergunta ${index + 1}:`, question.pergunta);
+        } else {
+          question.pergunta = `Pergunta ${index + 1}`;
+          console.warn(
+            `⚠️ Pergunta ${index + 1} sem dados suficientes, usando fallback`
+          );
+        }
+      }
+
+      // Padronizar campo de áudio
+      if (!question.som && question.audio) {
+        question.som = question.audio;
+        console.log(`🔄 Corrigido campo de áudio ${index + 1}:`, question.som);
+      }
+
+      // Garantir que tenha opções
+      if (!question.opcoes || question.opcoes.length === 0) {
+        question.opcoes = ["Opção A", "Opção B", "Opção C", "Opção D"];
+        question.resposta_correta = 0;
+        console.warn(`⚠️ Pergunta ${index + 1} sem opções, usando fallback`);
+      }
+    });
+  }
+
+  // 🎯 MÉTODO NOVO: Carregar pool de opções erradas
+  async loadWrongOptionsPool() {
+    try {
+      const response = await fetch("arquivos/dados/perguntas.json");
+      if (response.ok) {
+        const data = await response.json();
+        this.wrongOptionsPool = data.opcoes_erradas || [];
+        console.log(
+          "📚 Pool de opções erradas carregado:",
+          this.wrongOptionsPool.length
+        );
+      } else {
+        throw new Error("Erro ao carregar arquivo de perguntas");
+      }
+    } catch (error) {
+      console.warn(
+        "⚠️ Erro ao carregar pool de opções erradas, usando array vazio:",
+        error
+      );
+      this.wrongOptionsPool = [];
+    }
+  }
+
+  // 🎯 MÉTODO NOVO: Fallback para perguntas
+  async loadFallbackQuestions() {
+    try {
+      console.log("🔄 Carregando fallback de perguntas...");
+      const questionData = await QuestionManager.loadQuestions();
+      this.questions = questionData.questions;
+      this.selectedQuestions = questionData.selectedQuestions;
+      this.wrongOptionsPool = questionData.wrongOptionsPool;
+      this.totalRounds = questionData.totalRounds;
+      this.totalTime = questionData.totalTime;
+
+      console.log(
+        "🔄 Fallback carregado:",
+        this.selectedQuestions.length,
+        "perguntas"
+      );
+    } catch (error) {
+      console.error("❌ Erro no fallback:", error);
+      throw new Error("Não foi possível carregar perguntas");
+    }
+  }
+
+  // 🎯 MÉTODO CORRIGIDO: Verificar sincronização
+  async verifyQuestionsSynchronization() {
+    try {
+      console.log("🔍 Verificando sincronização de perguntas da dupla...");
+
+      const gameSnapshot = await firebaseDB.db
+        .ref(`birdbox/games/${this.gameId}/perguntas`)
+        .once("value");
+
+      const firebaseQuestions = gameSnapshot.val();
+      const localQuestions = this.selectedQuestions;
+
+      if (!firebaseQuestions || firebaseQuestions.length === 0) {
+        console.warn("⚠️ Nenhuma pergunta no Firebase");
+        return false;
+      }
+
+      if (!localQuestions || localQuestions.length === 0) {
+        console.warn("⚠️ Nenhuma pergunta local");
+        return false;
+      }
+
+      // Verificar se temos o mesmo número de perguntas
+      if (firebaseQuestions.length !== localQuestions.length) {
+        console.error("❌ Número de perguntas diferente:", {
+          firebase: firebaseQuestions.length,
+          local: localQuestions.length,
+        });
+        return false;
+      }
+
+      // Verificar conteúdo das perguntas
+      const areSame = this.compareQuestions(firebaseQuestions, localQuestions);
+
+      if (areSame) {
+        console.log("✅ PERGUNTAS SINCRONIZADAS: Dupla tem o mesmo pacote");
+        return true;
+      } else {
+        console.error("❌ PERGUNTAS DIFERENTES: Problema de sincronização");
+        return false;
+      }
+    } catch (error) {
+      console.error("❌ Erro na verificação de sincronização:", error);
+      return false;
+    }
+  }
+
+  // 🎯 MÉTODO NOVO: Comparar perguntas
+  compareQuestions(firebaseQuestions, localQuestions) {
+    try {
+      // Comparar por ID se disponível, senão por conteúdo
+      for (let i = 0; i < firebaseQuestions.length; i++) {
+        const firebaseQ = firebaseQuestions[i];
+        const localQ = localQuestions[i];
+
+        if (firebaseQ.id && localQ.id) {
+          if (firebaseQ.id !== localQ.id) return false;
+        } else if (firebaseQ.pergunta !== localQ.pergunta) {
+          return false;
+        }
+      }
+      return true;
+    } catch (error) {
+      console.error("❌ Erro ao comparar perguntas:", error);
+      return false;
+    }
+  }
+
+  // 🎯 MÉTODO NOVO: Forçar sincronização
+  async forceQuestionsSynchronization() {
+    try {
+      console.log("🔄 Forçando sincronização de perguntas...");
+
+      const gameSnapshot = await firebaseDB.db
+        .ref(`birdbox/games/${this.gameId}/perguntas`)
+        .once("value");
+
+      const firebaseQuestions = gameSnapshot.val();
+
+      if (firebaseQuestions && firebaseQuestions.length > 0) {
+        this.selectedQuestions = firebaseQuestions;
+        this.questions = firebaseQuestions;
+        this.totalRounds = firebaseQuestions.length;
+
+        // Corrigir estrutura
+        this.fixQuestionStructure();
+
+        console.log(
+          "✅ Sincronização forçada - Novas perguntas:",
+          this.selectedQuestions.length
+        );
+
+        // Recarregar a pergunta atual se necessário
+        if (this.currentRound <= this.totalRounds) {
+          await this.loadQuestionForCurrentRound();
+        }
+
+        return true;
+      } else {
+        console.warn("⚠️ Nenhuma pergunta no Firebase para sincronizar");
+        return false;
+      }
+    } catch (error) {
+      console.error("❌ Erro na sincronização forçada:", error);
+      return false;
+    }
+  }
+
+  // 🎯 MÉTODO DE DEBUG: Estrutura das perguntas
+  async debugQuestionStructure() {
+    console.log("🔍 DEBUG - Estrutura das perguntas carregadas:");
+
+    if (this.selectedQuestions && this.selectedQuestions.length > 0) {
+      this.selectedQuestions.forEach((q, index) => {
+        console.log(`Pergunta ${index + 1}:`, {
+          id: q.id,
+          pergunta: q.pergunta,
+          som: q.som || q.audio,
+          opcoes: q.opcoes ? q.opcoes.length : 0,
+          resposta_correta: q.resposta_correta,
+          dica: q.dica,
+          imagem: q.imagem,
+        });
+      });
+    } else {
+      console.warn("⚠️ Nenhuma pergunta carregada em selectedQuestions");
+    }
   }
 
   // Determinar o papel do jogador - VERSÃO CORRIGIDA
@@ -309,6 +519,7 @@ class GameManager {
     const mainMenuBtn = document.getElementById("mainMenuBtn");
     if (mainMenuBtn) {
       mainMenuBtn.addEventListener("click", () => {
+        this.cleanupFirebaseListeners();
         window.location.href = "index.html";
       });
     }
@@ -316,49 +527,66 @@ class GameManager {
     const rankingBtn = document.getElementById("rankingBtn");
     if (rankingBtn) {
       rankingBtn.addEventListener("click", () => {
-        window.location.href = "ranking.html"; // ou outro arquivo que você tiver
+        this.cleanupFirebaseListeners();
+        window.location.href = "ranking.html";
       });
     }
   }
 
-  // Configurar todos os botões
+  // Configurar todos os botões - VERSÃO CORRIGIDA
   setupAllButtons() {
-    // Botão de confirmar resposta (adivinhador)
+    // Botão de confirmar resposta (adivinhador) - APENAS UMA VEZ
     const submitButton = document.getElementById("submitAnswer");
     if (submitButton) {
-      submitButton.addEventListener("click", () => {
+      // Remover event listeners existentes primeiro
+      submitButton.replaceWith(submitButton.cloneNode(true));
+
+      // Adicionar novo listener
+      const newSubmitButton = document.getElementById("submitAnswer");
+      newSubmitButton.addEventListener("click", () => {
+        console.log("🎯 Submit button clicado - chamando submitAnswer");
         IdentifierManager.submitAnswer(this);
       });
     }
 
-    // Botões de navegação (ouvinte) - REMOVIDA A SINCRONIZAÇÃO COM FIREBASE
+    // Botões de navegação (ouvinte)
     const nextButton = document.getElementById("nextRound");
     const prevButton = document.getElementById("prevRound");
-    const finishButton = document.getElementById("finishGame");
+
+    // Botões de finalizar - CORREÇÃO: IDs específicos
+    const finishListenerBtn = document.getElementById("finishGameListener");
+    const finishIdentifierBtn = document.getElementById("finishGameIdentifier");
 
     if (nextButton) {
       nextButton.addEventListener("click", () => {
-        // Apenas avança localmente - listener já cuida disso
+        ListenerManager.advanceToNextRound(this);
       });
     }
 
     if (prevButton) {
       prevButton.addEventListener("click", () => {
-        // Apenas volta localmente - listener já cuida disso
+        ListenerManager.goToPreviousRound(this);
       });
     }
-    if (finishButton) {
-      finishButton.addEventListener("click", () => {
-        gameManager.playerFinishedGame();
 
-        // só depois desabilita
-        finishButton.disabled = true;
-        finishButton.classList.add("disabled-btn");
+    if (finishListenerBtn) {
+      finishListenerBtn.addEventListener("click", () => {
+        this.playerFinishedGame();
+        finishListenerBtn.disabled = true;
+        finishListenerBtn.classList.add("disabled-btn");
+      });
+    }
+
+    if (finishIdentifierBtn) {
+      finishIdentifierBtn.addEventListener("click", () => {
+        this.playerFinishedGame();
+        finishIdentifierBtn.disabled = true;
+        finishIdentifierBtn.classList.add("disabled-btn");
       });
     }
   }
 
-  // Configurar listeners do Firebase
+  // 🎯 CONFIGURAÇÃO COMPLETA DOS LISTENERS DO FIREBASE
   setupFirebaseListeners() {
     console.log("🔌 Configurando listeners do Firebase...", {
       gameId: this.gameId,
@@ -366,254 +594,364 @@ class GameManager {
     });
 
     try {
-      // LISTENER PARA PERGUNTAS SELECIONADAS (apenas para backup/resync)
-      this.questionsListener = firebaseDB.db
-        .ref(`birdbox/games/${this.gameId}/selectedQuestions`)
+      // 🎯 LISTENER PRINCIPAL: SINCRONIZAÇÃO DE PERGUNTAS DA DUPLA
+      this.questionsSyncListener = firebaseDB.db
+        .ref(`birdbox/games/${this.gameId}/perguntas`)
         .on("value", (snapshot) => {
-          const questionIds = snapshot.val();
-          if (questionIds && questionIds.length > 0) {
-            console.log(
-              "📋 Firebase: Perguntas selecionadas atualizadas",
-              questionIds
-            );
-            // Pode ser usado para verificar se há discrepância
+          const firebaseQuestions = snapshot.val();
+          console.log("📡 Listener: Perguntas da dupla no Firebase", {
+            quantidade: firebaseQuestions ? firebaseQuestions.length : 0,
+            rodadaAtual: this.currentRound,
+          });
+
+          if (firebaseQuestions && firebaseQuestions.length > 0) {
+            const needsSync =
+              this.needsQuestionsSynchronization(firebaseQuestions);
+
+            if (needsSync) {
+              console.log("🔄 Sincronizando perguntas locais com Firebase");
+              this.synchronizeQuestions(firebaseQuestions);
+            }
           }
         });
 
-      // LISTENER PARA PONTUAÇÃO E STATUS
+      // 📊 LISTENER: ESTADO GERAL DO JOGO
       this.gameListener = firebaseDB.db
         .ref(`birdbox/games/${this.gameId}`)
         .on("value", (snapshot) => {
           const gameData = snapshot.val();
           if (!gameData) return;
+
           this.updateGameState(gameData);
         });
 
-      // Listener para verificar se ambos finalizaram
+      // 👥 LISTENER: STATUS DOS JOGADORES
       this.playersListener = firebaseDB.db
         .ref(`birdbox/games/${this.gameId}/jogadores`)
         .on("value", (snapshot) => {
           const playersData = snapshot.val();
+          if (!playersData) return;
+
           this.checkIfBothPlayersFinished(playersData);
+          this.updatePartnerStatus(playersData);
         });
 
-      console.log("✅ Listeners do Firebase configurados");
+      console.log("✅ Todos os listeners do Firebase configurados com sucesso");
     } catch (error) {
-      console.error("❌ Erro ao configurar listeners do Firebase:", error);
+      console.error(
+        "❌ Erro crítico ao configurar listeners do Firebase:",
+        error
+      );
     }
   }
 
+  // 🎯 MÉTODO AUXILIAR: Verificar se precisa sincronizar
+  needsQuestionsSynchronization(firebaseQuestions) {
+    if (!this.selectedQuestions || this.selectedQuestions.length === 0) {
+      return true;
+    }
+
+    if (this.selectedQuestions.length !== firebaseQuestions.length) {
+      return true;
+    }
+
+    return !this.compareQuestions(firebaseQuestions, this.selectedQuestions);
+  }
+
+  // 🎯 MÉTODO AUXILIAR: Sincronizar perguntas
+  synchronizeQuestions(firebaseQuestions) {
+    try {
+      console.log("🔄 Iniciando sincronização de perguntas...");
+
+      const oldRound = this.currentRound;
+      const oldQuestionsCount = this.selectedQuestions.length;
+
+      this.selectedQuestions = firebaseQuestions;
+      this.questions = firebaseQuestions;
+      this.totalRounds = firebaseQuestions.length;
+
+      this.fixQuestionStructure();
+
+      console.log("📊 Sincronização concluída:", {
+        perguntasAntigas: oldQuestionsCount,
+        perguntasNovas: this.selectedQuestions.length,
+      });
+
+      if (this.currentRound > this.totalRounds) {
+        this.currentRound = Math.max(1, this.totalRounds);
+      }
+
+      if (
+        this.gameState === "playing" &&
+        this.currentRound <= this.totalRounds
+      ) {
+        this.loadQuestionForCurrentRound();
+      }
+
+      this.updateRoundDisplay();
+    } catch (error) {
+      console.error("❌ Erro durante sincronização:", error);
+    }
+  }
+
+  // 🎯 MÉTODO AUXILIAR: Atualizar status do parceiro
+  updatePartnerStatus(playersData) {
+    if (!playersData) return;
+
+    try {
+      const partnerId = Object.keys(playersData).find(
+        (id) => id !== this.playerId
+      );
+      if (!partnerId) return;
+
+      const partner = playersData[partnerId];
+
+      if (this.playerRole === "ouvinte") {
+        const statusElement = document.getElementById("partnerStatus");
+        if (statusElement) {
+          statusElement.textContent = partner.finalizado
+            ? "Adivinhador finalizou!"
+            : "Adivinhador ativo";
+          statusElement.className = partner.finalizado
+            ? "partner-status finished"
+            : "partner-status active";
+        }
+      } else {
+        const statusElement = document.getElementById("partnerDescription");
+        if (statusElement) {
+          statusElement.textContent = partner.finalizado
+            ? "Ouvinte finalizou!"
+            : "Ouvinte ativo";
+          statusElement.className = partner.finalizado
+            ? "partner-status finished"
+            : "partner-status active";
+        }
+      }
+    } catch (error) {
+      console.error("❌ Erro ao atualizar status do parceiro:", error);
+    }
+  }
+
+  // Limpeza completa dos listeners
   cleanupFirebaseListeners() {
-    console.log("🧹 Limpando listeners do Firebase...");
+    console.log("🧹 Limpando todos os listeners do Firebase...");
 
     const listeners = [
-      { name: "questionsListener", ref: this.questionsListener },
-      { name: "gameListener", ref: this.gameListener },
-      { name: "playersListener", ref: this.playersListener },
+      {
+        name: "questionsSyncListener",
+        path: `birdbox/games/${this.gameId}/perguntas`,
+      },
+      { name: "gameListener", path: `birdbox/games/${this.gameId}` },
+      {
+        name: "playersListener",
+        path: `birdbox/games/${this.gameId}/jogadores`,
+      },
+      {
+        name: "roundListener",
+        path: `birdbox/games/${this.gameId}/currentQuestionIndex`,
+      },
+      {
+        name: "descriptionListener",
+        path: `birdbox/games/${this.gameId}/descricaoAtual`,
+      },
+      {
+        name: "gameFinishedListener",
+        path: `birdbox/games/${this.gameId}/status`,
+      },
+      {
+        name: "questionsListener",
+        path: `birdbox/games/${this.gameId}/selectedQuestions`,
+      },
     ];
 
+    let removedCount = 0;
+
     listeners.forEach((listener) => {
-      if (listener.ref) {
+      if (this[listener.name]) {
         try {
-          // Desconectar o listener específico
-          if (listener.name === "questionsListener") {
-            firebaseDB.db
-              .ref(`birdbox/games/${this.gameId}/selectedQuestions`)
-              .off("value", listener.ref);
-          } else {
-            firebaseDB.db
-              .ref(`birdbox/games/${this.gameId}`)
-              .off("value", listener.ref);
-          }
-          console.log(`✅ Listener ${listener.name} removido`);
+          firebaseDB.db.ref(listener.path).off("value", this[listener.name]);
+          this[listener.name] = null;
+          removedCount++;
         } catch (error) {
           console.error(`❌ Erro ao remover listener ${listener.name}:`, error);
         }
       }
     });
 
-    // Limpar referências
-    this.questionsListener = null;
-    this.gameListener = null;
-    this.playersListener = null;
-
-    console.log("✅ Todos os listeners foram limpos");
+    console.log(`🧹 ${removedCount} listeners removidos`);
   }
 
-  // Atualizar estado do jogo - APENAS PONTUAÇÃO E STATUS FINAL
+  // Atualizar estado do jogo
   updateGameState(gameData) {
-    // Verificar se o jogo foi finalizado
     if (gameData.status === "finalizado") {
       this.endGame();
       return;
     }
 
-    // Apenas atualizar pontuação do próprio jogador
     if (gameData.jogadores && gameData.jogadores[this.playerId]) {
       const newScore = gameData.jogadores[this.playerId].pontuacao;
       if (newScore !== this.score) {
-        console.log("🔄 Pontuação atualizada via Firebase:", {
-          antigo: this.score,
-          novo: newScore,
-        });
         this.score = newScore;
         this.updateScoreDisplay();
       }
     }
   }
 
-  // Carregar próxima pergunta
-  async loadNextQuestion() {
+  // 🎯 CARREGAR PERGUNTA DA RODADA ATUAL - VERSÃO COMPLETA CORRIGIDA
+  async loadQuestionForCurrentRound() {
     if (this.currentRound > this.totalRounds) {
-      // Se já passou do total, mantém na última rodada
-      this.currentRound = this.totalRounds;
-      this.updateRoundDisplay();
-      return; // não finaliza aqui
+      this.handleGameCompletion();
+      return;
     }
 
-    this.currentQuestion = this.selectedQuestions[this.currentRound - 1];
-
-    await firebaseDB.db
-      .ref(`birdbox/games/${this.gameId}/currentQuestion`)
-      .set(this.currentQuestion.id);
-
-    const preparedOptions = QuestionManager.prepareQuestionOptions(
-      this.currentQuestion,
-      this.wrongOptionsPool
-    );
-    this.currentQuestion.displayOptions = preparedOptions.options;
-    this.currentQuestion.correctDisplayIndex = preparedOptions.correctIndex;
-    if (this.playerRole === "ouvinte") {
-      ListenerManager.prepareAudio(this.currentQuestion);
-      ListenerManager.updateInterface(this.currentRound, this.totalRounds);
-    } else {
-      IdentifierManager.updateOptions(this.currentQuestion);
+    if (!this.selectedQuestions || this.selectedQuestions.length === 0) {
+      console.error("❌ Nenhuma pergunta disponível");
+      this.showErrorState("Erro: Nenhuma pergunta disponível");
+      return;
     }
 
-    this.updateRoundDisplay();
-  }
-
-  // Carregar pergunta para adivinhador
-  async loadQuestionForIdentifier(questionId) {
     try {
-      console.log("🔄 Adivinhador: Carregando pergunta ID:", questionId);
+      console.log(
+        "🔄 Carregando pergunta:",
+        `Rodada ${this.currentRound}/${this.totalRounds}`,
+        `Papel: ${this.playerRole}`
+      );
 
-      // Encontrar a pergunta no array de perguntas
-      this.currentQuestion = this.questions.find((q) => q.id === questionId);
+      // 🎯 USA AS PERGUNTAS SINCRONIZADAS DA DUPLA
+      this.currentQuestion = this.selectedQuestions[this.currentRound - 1];
 
       if (!this.currentQuestion) {
-        console.error("❌ Pergunta não encontrada no array local:", questionId);
-        console.log(
-          "📋 Perguntas disponíveis:",
-          this.questions.map((q) => ({ id: q.id, pergunta: q.pergunta }))
+        throw new Error(
+          `Pergunta não encontrada para rodada ${this.currentRound}`
         );
-        IdentifierManager.showWaitingState();
-        return;
       }
 
-      console.log("✅ Pergunta carregada:", {
-        id: this.currentQuestion.id,
+      console.log("📋 Dados da pergunta SINCRONIZADA:", {
+        rodada: this.currentRound,
+        id: this.currentQuestion.id || `auto-${Date.now()}`,
         pergunta: this.currentQuestion.pergunta,
-        som: this.currentQuestion.som,
+        som: this.currentQuestion.som || this.currentQuestion.audio,
       });
 
-      const preparedOptions = QuestionManager.prepareQuestionOptions(
-        this.currentQuestion,
-        this.wrongOptionsPool
-      );
-      this.currentQuestion.displayOptions = preparedOptions.options;
-      this.currentQuestion.correctDisplayIndex = preparedOptions.correctIndex;
-
-      console.log("📝 Opções preparadas:", {
-        options: preparedOptions.options,
-        correctIndex: preparedOptions.correctIndex,
-      });
-
-      IdentifierManager.updateOptions(this.currentQuestion);
-      this.updateRoundDisplay();
-
-      // HABILITAR OPÇÕES IMEDIATAMENTE
-      IdentifierManager.enableAnswerOptions();
-      console.log("🎯 Opções habilitadas para resposta");
-    } catch (error) {
-      console.error("❌ Erro ao carregar pergunta:", error);
-      IdentifierManager.showWaitingState();
-    }
-  }
-
-  // Carregar pergunta da rodada atual - PARA AMBOS OS JOGADORES
-  // Carregar pergunta da rodada atual - PARA AMBOS OS JOGADORES (COMPLETAMENTE INDEPENDENTES)
-  async loadQuestionForCurrentRound() {
-    if (this.currentRound <= this.totalRounds) {
+      // PREPARAR OPÇÕES
+      let preparedOptions;
       try {
-        console.log(
-          "🔄 Carregando pergunta da rodada:",
-          this.currentRound,
-          "- Papel:",
-          this.playerRole
-        );
-
-        // Busca a pergunta correspondente à rodada atual (AMBOS OS JOGADORES)
-        this.currentQuestion = this.selectedQuestions[this.currentRound - 1];
-
-        if (!this.currentQuestion) {
-          console.error(
-            "❌ Pergunta não encontrada para rodada:",
-            this.currentRound
-          );
-          return;
-        }
-
-        console.log("📋 Dados da pergunta:", {
-          round: this.currentRound,
-          questionId: this.currentQuestion.id,
-          pergunta: this.currentQuestion.pergunta,
-          som: this.currentQuestion.som,
-        });
-
-        // *** REMOVIDO: OUVINTE NÃO ATUALIZA MAIS O FIREBASE AO NAVEGAR ***
-        // CADA JOGADOR É COMPLETAMENTE INDEPENDENTE
-
-        // Prepara as opções (apenas em memória local - AMBOS OS JOGADORES)
-        const preparedOptions = QuestionManager.prepareQuestionOptions(
+        preparedOptions = QuestionManager.prepareQuestionOptions(
           this.currentQuestion,
           this.wrongOptionsPool
         );
-        this.currentQuestion.displayOptions = preparedOptions.options;
-        this.currentQuestion.correctDisplayIndex = preparedOptions.correctIndex;
 
-        // ATUALIZA INTERFACE CONFORME O PAPEL
-        if (this.playerRole === "ouvinte") {
-          console.log(
-            "🎵 Ouvinte preparando áudio para rodada",
-            this.currentRound
-          );
-          ListenerManager.prepareAudio(this.currentQuestion);
-          ListenerManager.updateInterface(this.currentRound, this.totalRounds);
-        } else {
-          console.log(
-            "🎯 Adivinhador preparando opções para rodada",
-            this.currentRound
-          );
-          IdentifierManager.updateOptions(this.currentQuestion);
-          this.updateRoundDisplay();
+        if (!preparedOptions.options || preparedOptions.options.length < 2) {
+          throw new Error("Opções insuficientes");
         }
 
-        console.log(
-          "✅",
-          this.playerRole,
-          "carregou pergunta",
-          this.currentRound,
-          "LOCALMENTE"
-        );
-      } catch (error) {
-        console.error("❌ Erro em loadQuestionForCurrentRound:", error);
+        this.currentQuestion.displayOptions = preparedOptions.options;
+        this.currentQuestion.correctDisplayIndex = preparedOptions.correctIndex;
+      } catch (optionsError) {
+        console.error("❌ Erro ao preparar opções:", optionsError);
+        this.currentQuestion.displayOptions = [
+          "Opção A",
+          "Opção B",
+          "Opção C",
+          "Opção D",
+        ];
+        this.currentQuestion.correctDisplayIndex = 0;
       }
-    } else {
-      console.log("🏁", this.playerRole, "completou todas as rodadas");
+
+      // ATUALIZAR INTERFACE
+      await this.updateInterfaceForCurrentRole();
+
+      console.log(
+        "✅",
+        this.playerRole,
+        "pronto para rodada",
+        this.currentRound,
+        "- PERGUNTA SINCRONIZADA"
+      );
+    } catch (error) {
+      console.error("❌ Erro em loadQuestionForCurrentRound:", error);
+      await this.handleLoadError(error);
     }
   }
 
+  // 🎯 MÉTODO AUXILIAR: Atualizar interface por papel
+  async updateInterfaceForCurrentRole() {
+    if (this.playerRole === "ouvinte") {
+      console.log(
+        "🎵 [OUVINTE] Configurando interface para rodada",
+        this.currentRound
+      );
+      ListenerManager.prepareAudio(this.currentQuestion);
+      ListenerManager.updateInterface(this.currentRound, this.totalRounds);
+    } else {
+      console.log(
+        "🎯 [ADIVINHADOR] Configurando interface para rodada",
+        this.currentRound
+      );
+      IdentifierManager.updateOptions(this.currentQuestion);
+      this.updateRoundDisplay();
+      IdentifierManager.enableAnswerOptions();
+      this.selectedOption = null;
+      IdentifierManager.resetAnswerInterface();
+    }
+  }
+
+  // 🎯 MÉTODO AUXILIAR: Tratamento de erro
+  async handleLoadError(error) {
+    const errorMessage = `Erro ao carregar pergunta: ${error.message}`;
+    console.error("❌", errorMessage);
+
+    if (this.playerRole === "ouvinte") {
+      ListenerManager.showErrorState(errorMessage);
+    } else {
+      IdentifierManager.showErrorState(errorMessage);
+    }
+  }
+
+  // 🎯 MÉTODO AUXILIAR: Conclusão do jogo
+  handleGameCompletion() {
+    console.log("🎉 [CONCLUSÃO] Jogo completado por", this.playerRole);
+
+    if (this.playerRole === "ouvinte") {
+      ListenerManager.showCompletionState(this.totalRounds);
+    } else {
+      IdentifierManager.showCompletionState(this.totalRounds);
+    }
+
+    if (this.currentRound >= this.totalRounds) {
+      this.playerFinishedGame();
+    }
+  }
+
+  // 🎯 MÉTODO AUXILIAR: Mostrar erro
+  showErrorState(message) {
+    const errorElement =
+      document.getElementById("errorMessage") || this.createErrorElement();
+    if (errorElement) {
+      errorElement.textContent = message;
+      errorElement.style.display = "block";
+    }
+  }
+
+  // 🎯 MÉTODO AUXILIAR: Criar elemento de erro
+  createErrorElement() {
+    const errorElement = document.createElement("div");
+    errorElement.id = "errorMessage";
+    errorElement.style.cssText = `
+      background: #f8d7da;
+      color: #721c24;
+      padding: 10px;
+      border-radius: 5px;
+      margin: 10px 0;
+      border: 1px solid #f5c6cb;
+    `;
+
+    const container = document.querySelector(".container") || document.body;
+    container.prepend(errorElement);
+    return errorElement;
+  }
+
+  // Avançar para próxima rodada
   async advanceToNextRound() {
     if (this.isAdvancing) return;
     this.isAdvancing = true;
@@ -625,7 +963,6 @@ class GameManager {
     });
 
     try {
-      // AMBOS OS JOGADORES AVANÇAM LOCALMENTE
       if (this.currentRound < this.totalRounds) {
         this.currentRound++;
         console.log(
@@ -635,21 +972,16 @@ class GameManager {
           this.currentRound
         );
 
-        // Atualiza display da rodada
         this.updateRoundDisplay();
-
-        // Carrega a próxima pergunta LOCALMENTE
         await this.loadQuestionForCurrentRound();
 
         console.log(
           "✅",
           this.playerRole,
           "carregou pergunta",
-          this.currentRound,
-          "localmente"
+          this.currentRound
         );
       } else if (this.currentRound === this.totalRounds) {
-        // Última rodada - não avança mais
         console.log(
           "🎯",
           this.playerRole,
@@ -658,22 +990,26 @@ class GameManager {
         );
         this.currentRound = this.totalRounds;
         this.updateRoundDisplay();
-
-        if (this.currentRound >= this.totalRounds) {
-          console.log("🏁", this.playerRole, "completou todas as rodadas");
-        }
       }
     } catch (error) {
       console.error("❌ Erro em advanceToNextRound:", error);
     } finally {
       setTimeout(() => {
         this.isAdvancing = false;
-        console.log("✅ advanceToNextRound concluído");
       }, 100);
     }
   }
 
-  // Quando um jogador finaliza
+  // Resto dos métodos permanecem iguais...
+  async checkAndAdvanceRound() {
+    await firebaseDB.db
+      .ref(
+        `birdbox/games/${this.gameId}/jogadores/${this.playerId}/readyForNextRound`
+      )
+      .set(false);
+    this.advanceToNextRound();
+  }
+
   async playerFinishedGame() {
     try {
       await firebaseDB.db
@@ -681,25 +1017,20 @@ class GameManager {
           `birdbox/games/${this.gameId}/jogadores/${this.playerId}/finalizado`
         )
         .set(true);
-
       this.showWaitingMessage();
     } catch (error) {
       console.error("Erro ao marcar jogo como finalizado:", error);
     }
   }
 
-  // Verificar se ambos finalizaram
   async checkIfBothPlayersFinished(playersData) {
     if (!playersData) return;
-
     const allFinished = Object.values(playersData).every((p) => p.finalizado);
-
     if (allFinished) {
-      await this.endGame(); // só termina quando ambos finalizam
+      await this.endGame();
     }
   }
 
-  // Mostrar mensagem de espera
   showWaitingMessage() {
     if (this.playerRole === "ouvinte") {
       const statusElement = document.getElementById("partnerStatus");
@@ -714,14 +1045,12 @@ class GameManager {
     }
   }
 
-  // Resetar interface de resposta
   resetAnswerInterface() {
     if (this.playerRole === "adivinhador") {
       IdentifierManager.resetAnswerInterface();
     }
   }
 
-  // Iniciar timer do jogo
   startGameTimer() {
     this.timerInterval = setInterval(() => {
       this.totalTime--;
@@ -734,7 +1063,6 @@ class GameManager {
     }, 1000);
   }
 
-  // Atualizar display do timer
   updateTimerDisplay() {
     const minutes = Math.floor(this.totalTime / 60);
     const seconds = this.totalTime % 60;
@@ -746,7 +1074,6 @@ class GameManager {
     }
   }
 
-  // Atualizar display da rodada
   updateRoundDisplay() {
     const roundEl = document.getElementById("currentRound");
     const roundNumber = document.getElementById("roundNumber");
@@ -762,13 +1089,11 @@ class GameManager {
     if (nextBtn) nextBtn.disabled = this.currentRound >= this.totalRounds;
   }
 
-  // Atualizar display da pontuação
   updateScoreDisplay() {
     const scoreEl = document.getElementById("playerScore");
     if (scoreEl) scoreEl.textContent = this.score;
   }
 
-  // Finalizar o jogo
   async endGame() {
     clearInterval(this.timerInterval);
     this.gameState = "finished";
@@ -776,7 +1101,6 @@ class GameManager {
     this.showGameOverScreen();
   }
 
-  // Salvar pontuação final
   async saveFinalScore() {
     try {
       await firebaseDB.db
@@ -790,13 +1114,11 @@ class GameManager {
     }
   }
 
-  // Mostrar tela de fim de jogo
   showGameOverScreen() {
     const gameOverOverlay = document.getElementById("gameOverOverlay");
     if (gameOverOverlay) gameOverOverlay.classList.add("active");
   }
 
-  // Calcular precisão do adivinhador
   calculateAccuracy() {
     const totalAnswered = Math.min(this.currentRound - 1, this.totalRounds);
     if (totalAnswered === 0) return 0;
@@ -804,54 +1126,52 @@ class GameManager {
     return Math.round((this.score / expectedScore) * 100);
   }
 
-  // Reiniciar o jogo
   restartGame() {
     console.log("🔄 Reiniciando jogo...");
-
-    // Limpar todos os listeners primeiro
     this.cleanupFirebaseListeners();
-
-    // Limpar intervalos de tempo
     if (this.timerInterval) {
       clearInterval(this.timerInterval);
       this.timerInterval = null;
     }
-
-    // Recarregar a página
-    console.log("🔄 Recarregando página...");
     window.location.reload();
   }
 
-  // Esconder tela de carregamento
   hideLoadingScreen() {
     const loadingOverlay = document.getElementById("loadingOverlay");
     if (loadingOverlay) loadingOverlay.classList.remove("active");
   }
 }
 
-// Seleção de opções (habilita Confirmar)
+// Event listeners globais - VERSÃO CORRIGIDA
 document.querySelectorAll(".option-btn").forEach((btn) => {
   btn.addEventListener("click", () => {
-    gameManager.selectedOption = btn.dataset.option;
+    // CORREÇÃO: Usar window.selectedOption consistentemente
+    window.selectedOption = parseInt(btn.dataset.option);
+
+    // CORREÇÃO: Também atualizar no gameManager para consistência
+    if (typeof gameManager !== "undefined") {
+      gameManager.selectedOption = window.selectedOption;
+    }
+
     const submitBtn = document.getElementById("submitAnswer");
     if (submitBtn) submitBtn.disabled = false;
 
-    // Destaque visual
     document
       .querySelectorAll(".option-btn")
       .forEach((b) => b.classList.remove("selected"));
     btn.classList.add("selected");
 
     resetInactivityTimer();
+
+    console.log("✅ Opção selecionada:", window.selectedOption);
   });
 });
 
-// Confirmar Resposta
 const submitBtn = document.getElementById("submitAnswer");
 if (submitBtn) {
   submitBtn.addEventListener("click", () => {
     if (gameManager.selectedOption !== null) {
-      IdentifierManager.submitAnswer(gameManager); // chama lógica central
+      IdentifierManager.submitAnswer(gameManager);
       submitBtn.disabled = true;
       gameManager.selectedOption = null;
       resetInactivityTimer();
@@ -859,18 +1179,16 @@ if (submitBtn) {
   });
 }
 
-// Finalizar jogo manualmente
 document.querySelectorAll("#finishGame").forEach((btn) => {
   btn.addEventListener("click", () => {
-    gameManager.playerFinishedGame(); // usa método da classe
+    gameManager.playerFinishedGame();
   });
 });
 
-// Encerramento automático por inatividade (3 min)
 function resetInactivityTimer() {
   if (inactivityTimer) clearTimeout(inactivityTimer);
   inactivityTimer = setTimeout(() => {
-    gameManager.playerFinishedGame(); // só marca jogador como finalizado
+    gameManager.playerFinishedGame();
   }, 3 * 60 * 1000);
 }
 

@@ -11,8 +11,6 @@ class IdentifierManager {
         option.addEventListener("click", (e) => {
           IdentifierManager.selectOption(e.currentTarget);
         });
-        const optionText = option.querySelector(".option-text");
-        if (optionText) optionText.textContent = "Aguardando...";
       });
 
       submitButton.onclick = () => {
@@ -24,8 +22,6 @@ class IdentifierManager {
     if (finishButton) {
       finishButton.addEventListener("click", () => {
         gameManager.playerFinishedGame();
-
-        // só depois desabilita
         finishButton.disabled = true;
         finishButton.classList.add("disabled-btn");
       });
@@ -37,7 +33,7 @@ class IdentifierManager {
     }
   }
 
-  // Atualizar opções - MODIFICADO: habilitar opções imediatamente
+  // Atualizar opções - CORRIGIDO: garantir que opções fiquem habilitadas
   static updateOptions(question) {
     const optionsContainer = document.getElementById("optionsContainer");
     const optionButtons = optionsContainer.querySelectorAll(".option-btn");
@@ -54,7 +50,22 @@ class IdentifierManager {
           const optionText = optionButtons[index].querySelector(".option-text");
           if (optionText) optionText.textContent = option;
           optionButtons[index].dataset.option = index;
-          optionButtons[index].classList.remove("disabled");
+
+          // CORREÇÃO: Remover completamente a classe disabled e restaurar pointer-events
+          optionButtons[index].classList.remove(
+            "disabled",
+            "selected",
+            "correct",
+            "incorrect"
+          );
+          optionButtons[index].style.pointerEvents = "auto";
+
+          // Remover emojis de feedback se existirem
+          const feedbackEmoji =
+            optionButtons[index].querySelector(".feedback-emoji");
+          if (feedbackEmoji) {
+            feedbackEmoji.remove();
+          }
         }
       });
 
@@ -63,10 +74,9 @@ class IdentifierManager {
         descElement.classList.add("active");
       }
 
-      // HABILITAR OPÇÕES IMEDIATAMENTE, SEM AGUARDAR DESCRIÇÃO
+      // CORREÇÃO: Reabilitar completamente as opções
       IdentifierManager.enableAnswerOptions();
     } else {
-      // Se não há opções, mostrar estado de espera
       optionButtons.forEach((button, index) => {
         const optionText = button.querySelector(".option-text");
         if (optionText) optionText.textContent = "Aguardando...";
@@ -80,132 +90,141 @@ class IdentifierManager {
     }
   }
 
+  // CORREÇÃO COMPLETA: Resetar interface sem desabilitar permanentemente
   static resetAnswerInterface() {
     const options = document.querySelectorAll(".option-btn");
     const submitButton = document.getElementById("submitAnswer");
 
-    // Apenas resetar seleções, não o texto se já temos uma pergunta
+    // Apenas resetar seleções e feedback visual, NÃO desabilitar
     options.forEach((option) => {
       option.classList.remove("selected", "correct", "incorrect");
-      option.classList.add("disabled"); // manter desabilitado até enableAnswerOptions()
+      option.style.pointerEvents = "auto"; // Garantir que clicks funcionem
+
+      // Remover emojis de feedback
+      const feedbackEmoji = option.querySelector(".feedback-emoji");
+      if (feedbackEmoji) {
+        feedbackEmoji.remove();
+      }
     });
 
     if (submitButton) submitButton.disabled = true;
     window.selectedOption = null;
-  }
-  async loadQuestionForIdentifier(questionId) {
-    try {
-      this.currentQuestion = this.questions.find((q) => q.id === questionId);
-      if (this.currentQuestion) {
-        const preparedOptions = QuestionManager.prepareQuestionOptions(
-          this.currentQuestion,
-          this.wrongOptionsPool
-        );
-        this.currentQuestion.displayOptions = preparedOptions.options;
-        this.currentQuestion.correctDisplayIndex = preparedOptions.correctIndex;
-        IdentifierManager.updateOptions(this.currentQuestion);
-        this.updateRoundDisplay();
-      }
-    } catch (error) {
-      console.error("Erro ao carregar pergunta:", error);
+
+    // CORREÇÃO: Se o gameManager estiver disponível, resetar também
+    if (typeof gameManager !== "undefined") {
+      gameManager.selectedOption = null;
     }
   }
 
-  // Atualizar descrição do parceiro - MODIFICADO: não habilita mais opções
-  static updatePartnerDescription(description) {
-    const descElement = document.getElementById("partnerDescription");
-    if (descElement) {
-      descElement.textContent = description;
-      descElement.classList.add("active");
-    }
-  }
-
-  // Habilitar opções de resposta
+  // CORREÇÃO: Habilitar opções de resposta completamente
   static enableAnswerOptions() {
     const options = document.querySelectorAll(".option-btn");
+    const submitButton = document.getElementById("submitAnswer");
+
     options.forEach((option) => {
       option.classList.remove("disabled");
+      option.style.pointerEvents = "auto"; // Garantir que clicks funcionem
     });
 
-    const submitButton = document.getElementById("submitAnswer");
     if (submitButton) submitButton.disabled = false;
+
+    console.log("✅ Opções habilitadas para seleção");
   }
 
-  // Selecionar opção
+  // Selecionar opção - VERSÃO CORRIGIDA
   static selectOption(optionElement) {
-    if (optionElement.classList.contains("disabled")) return;
+    if (optionElement.classList.contains("disabled")) {
+      console.log("⚠️ Opção desabilitada, ignorando clique");
+      return;
+    }
 
     const previouslySelected = document.querySelector(".option-btn.selected");
     if (previouslySelected) {
       previouslySelected.classList.remove("selected");
     }
+
     optionElement.classList.add("selected");
+
+    // CORREÇÃO: Atualizar ambas as variáveis consistentemente
     window.selectedOption = parseInt(optionElement.dataset.option);
-  }
 
-  static showWaitingState() {
-    const options = document.querySelectorAll(".option-btn");
+    if (typeof gameManager !== "undefined") {
+      gameManager.selectedOption = window.selectedOption;
+    }
+
+    console.log("🎯 Opção selecionada:", window.selectedOption);
+
+    // CORREÇÃO: Habilitar botão de submit
     const submitButton = document.getElementById("submitAnswer");
-    const descElement = document.getElementById("partnerDescription");
-
-    if (descElement) {
-      descElement.textContent = "Aguardando pergunta do ouvinte...";
-      descElement.classList.remove("active");
-    }
-
-    options.forEach((option, index) => {
-      const optionText = option.querySelector(".option-text");
-      if (optionText) optionText.textContent = "Aguardando...";
-      option.classList.add("disabled");
-      option.classList.remove("selected", "correct", "incorrect");
-    });
-
     if (submitButton) {
-      submitButton.disabled = true;
+      submitButton.disabled = false;
     }
-
-    window.selectedOption = null;
-
-    console.log("⏳ Adivinhador em estado de espera - aguardando pergunta");
   }
 
-  // Submeter resposta
+  // Submeter resposta - VERSÃO CORRIGIDA
   static async submitAnswer(gameManager) {
-    // VERIFICAÇÃO CRÍTICA - garantir que temos uma pergunta
+    const submitButton = document.getElementById("submitAnswer");
+
+    // PREVENIR MÚLTIPLOS CLICKS
+    if (submitButton && submitButton.disabled) {
+      console.log("⏳ Resposta já sendo processada... ignorando clique duplo");
+      return;
+    }
+
+    // VERIFICAÇÃO CORRIGIDA: Usar a variável do gameManager como primária
+    const selectedOption =
+      gameManager.selectedOption !== null
+        ? gameManager.selectedOption
+        : window.selectedOption;
+
+    if (selectedOption === null) {
+      alert("Selecione uma opção antes de confirmar.");
+      return;
+    }
+
     if (!gameManager.currentQuestion) {
       console.error("❌ Erro: currentQuestion é null");
       alert("Aguarde a pergunta ser carregada antes de responder.");
       return;
     }
 
-    if (window.selectedOption === null) {
-      alert("Selecione uma opção antes de confirmar.");
-      return;
-    }
-
-    // PREVENIR MÚLTIPLOS CLICKS
-    const submitButton = document.getElementById("submitAnswer");
-    if (submitButton && submitButton.disabled) {
-      console.log("⏳ Resposta já sendo processada...");
-      return;
-    }
-
     try {
-      // Desabilitar botão imediatamente para prevenir múltiplos cliques
-      if (submitButton) submitButton.disabled = true;
+      // Desabilitar botão IMEDIATAMENTE
+      if (submitButton) {
+        submitButton.disabled = true;
+        submitButton.textContent = "Processando...";
+      }
 
       console.log("📝 Adivinhador submetendo resposta...", {
-        selectedOption: window.selectedOption,
+        selectedOption: selectedOption,
         correctIndex: gameManager.currentQuestion.correctDisplayIndex,
         pergunta: gameManager.currentQuestion.pergunta,
         rodada: gameManager.currentRound,
       });
 
       const isCorrect =
-        window.selectedOption ===
-        gameManager.currentQuestion.correctDisplayIndex;
-
+        selectedOption === gameManager.currentQuestion.correctDisplayIndex;
       console.log("✅ Resposta correta?", isCorrect);
+
+      // FEEDBACK VISUAL IMEDIATO
+      const selectedElement = document.querySelector(".option-btn.selected");
+      if (selectedElement) {
+        if (isCorrect) {
+          selectedElement.classList.add("correct");
+          selectedElement.classList.remove("incorrect");
+        } else {
+          selectedElement.classList.add("incorrect");
+          selectedElement.classList.remove("correct");
+
+          // Mostrar qual era a resposta correta
+          const correctElement = document.querySelector(
+            `.option-btn[data-option="${gameManager.currentQuestion.correctDisplayIndex}"]`
+          );
+          if (correctElement) {
+            correctElement.classList.add("correct");
+          }
+        }
+      }
 
       if (isCorrect) {
         const points = IdentifierManager.calculatePoints(
@@ -214,10 +233,7 @@ class IdentifierManager {
         gameManager.score += points;
         gameManager.updateScoreDisplay();
 
-        console.log(
-          "🎯 Tentando salvar pontuação no Firebase...",
-          gameManager.score
-        );
+        console.log("🎯 Salvando pontuação no Firebase...", gameManager.score);
 
         await firebaseDB.db
           .ref(
@@ -226,35 +242,60 @@ class IdentifierManager {
           .set(gameManager.score);
 
         console.log("💾 Pontuação salva no Firebase:", gameManager.score);
-      } else {
-        console.log("❌ Resposta incorreta - sem pontos");
       }
 
-      // Desabilita opções após responder
-      document
-        .querySelectorAll(".option-btn")
-        .forEach((option) => option.classList.add("disabled"));
+      // Registrar resposta no histórico
+      try {
+        await firebaseDB.db
+          .ref(
+            `birdbox/games/${gameManager.gameId}/jogadores/${gameManager.playerId}/respostas/${gameManager.currentRound}`
+          )
+          .set({
+            opcaoSelecionada: selectedOption,
+            correta: isCorrect,
+            tempo: Date.now(),
+            pontos: isCorrect
+              ? IdentifierManager.calculatePoints(gameManager.currentQuestion)
+              : 0,
+          });
+      } catch (historyError) {
+        console.warn("⚠️ Não foi possível salvar no histórico:", historyError);
+      }
 
-      // Avança LOCALMENTE para próxima pergunta
+      // CORREÇÃO: Desabilitar temporariamente as opções durante o feedback
+      document.querySelectorAll(".option-btn").forEach((option) => {
+        option.style.pointerEvents = "none";
+      });
+
+      // Aguardar para o jogador ver o feedback
+      await new Promise((resolve) => setTimeout(resolve, 1500));
+
+      // CORREÇÃO: Resetar seleção
+      window.selectedOption = null;
+      gameManager.selectedOption = null;
+
+      // Avançar para próxima pergunta
       await gameManager.advanceToNextRound();
     } catch (error) {
       console.error("❌ Erro ao enviar resposta:", error);
-      // Re-habilitar botão em caso de erro
-      if (submitButton) submitButton.disabled = false;
+
+      // CORREÇÃO: Re-habilitar interface em caso de erro
+      if (submitButton) {
+        submitButton.disabled = false;
+        submitButton.textContent = "Confirmar Resposta";
+      }
+
+      document.querySelectorAll(".option-btn").forEach((option) => {
+        option.style.pointerEvents = "auto";
+      });
+
+      alert("Erro ao processar resposta. Tente novamente.");
     }
   }
 
-  // Calcular pontos - VERSÃO DEFINITIVA
+  // Calcular pontos
   static calculatePoints(question) {
     const basePoints = 100;
-
-    // Verificar se a pergunta tem a estrutura esperada
-    if (!question) {
-      console.warn("⚠️  Pergunta não definida, usando pontos base");
-      return basePoints;
-    }
-
-    // Tentar diferentes possíveis nomes de campo para dificuldade
     let difficulty = 1;
 
     if (question.dificuldade !== undefined) {
@@ -265,17 +306,8 @@ class IdentifierManager {
       difficulty = question.nivel;
     }
 
-    // Garantir que a dificuldade seja um número válido
     difficulty = Number(difficulty) || 1;
-
     const points = basePoints * difficulty;
-
-    console.log("💰 Pontos calculados:", {
-      basePoints,
-      difficulty,
-      total: points,
-      questionId: question.id,
-    });
 
     return points;
   }
