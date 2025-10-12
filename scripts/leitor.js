@@ -41,8 +41,14 @@ class IdentifierManager {
   static updateOptions(question) {
     const optionsContainer = document.getElementById("optionsContainer");
     const optionButtons = optionsContainer.querySelectorAll(".option-btn");
+    const descElement = document.getElementById("partnerDescription");
 
     if (question && question.displayOptions) {
+      console.log(
+        "🎯 Atualizando opções para o adivinhador:",
+        question.displayOptions
+      );
+
       question.displayOptions.forEach((option, index) => {
         if (optionButtons[index]) {
           const optionText = optionButtons[index].querySelector(".option-text");
@@ -51,6 +57,11 @@ class IdentifierManager {
           optionButtons[index].classList.remove("disabled");
         }
       });
+
+      if (descElement) {
+        descElement.textContent = "Escolha a opção correta!";
+        descElement.classList.add("active");
+      }
 
       // HABILITAR OPÇÕES IMEDIATAMENTE, SEM AGUARDAR DESCRIÇÃO
       IdentifierManager.enableAnswerOptions();
@@ -61,6 +72,11 @@ class IdentifierManager {
         if (optionText) optionText.textContent = "Aguardando...";
         button.classList.add("disabled");
       });
+
+      if (descElement) {
+        descElement.textContent = "Aguardando pergunta do ouvinte...";
+        descElement.classList.remove("active");
+      }
     }
   }
 
@@ -167,11 +183,22 @@ class IdentifierManager {
       return;
     }
 
+    // PREVENIR MÚLTIPLOS CLICKS
+    const submitButton = document.getElementById("submitAnswer");
+    if (submitButton && submitButton.disabled) {
+      console.log("⏳ Resposta já sendo processada...");
+      return;
+    }
+
     try {
-      console.log("📝 Submetendo resposta...", {
+      // Desabilitar botão imediatamente para prevenir múltiplos cliques
+      if (submitButton) submitButton.disabled = true;
+
+      console.log("📝 Adivinhador submetendo resposta...", {
         selectedOption: window.selectedOption,
         correctIndex: gameManager.currentQuestion.correctDisplayIndex,
-        question: gameManager.currentQuestion.pergunta,
+        pergunta: gameManager.currentQuestion.pergunta,
+        rodada: gameManager.currentRound,
       });
 
       const isCorrect =
@@ -187,13 +214,20 @@ class IdentifierManager {
         gameManager.score += points;
         gameManager.updateScoreDisplay();
 
+        console.log(
+          "🎯 Tentando salvar pontuação no Firebase...",
+          gameManager.score
+        );
+
         await firebaseDB.db
           .ref(
             `birdbox/games/${gameManager.gameId}/jogadores/${gameManager.playerId}/pontuacao`
           )
           .set(gameManager.score);
 
-        console.log("🎯 Pontos adicionados:", points);
+        console.log("💾 Pontuação salva no Firebase:", gameManager.score);
+      } else {
+        console.log("❌ Resposta incorreta - sem pontos");
       }
 
       // Desabilita opções após responder
@@ -201,20 +235,48 @@ class IdentifierManager {
         .querySelectorAll(".option-btn")
         .forEach((option) => option.classList.add("disabled"));
 
-      const submitButton = document.getElementById("submitAnswer");
-      if (submitButton) submitButton.disabled = true;
-
-      // Avança **somente o próprio jogador**
+      // Avança LOCALMENTE para próxima pergunta
       await gameManager.advanceToNextRound();
     } catch (error) {
       console.error("❌ Erro ao enviar resposta:", error);
+      // Re-habilitar botão em caso de erro
+      if (submitButton) submitButton.disabled = false;
     }
   }
 
-  // Calcular pontos
+  // Calcular pontos - VERSÃO DEFINITIVA
   static calculatePoints(question) {
     const basePoints = 100;
-    const difficultyMultiplier = question.dificuldade || 1;
-    return basePoints * difficultyMultiplier;
+
+    // Verificar se a pergunta tem a estrutura esperada
+    if (!question) {
+      console.warn("⚠️  Pergunta não definida, usando pontos base");
+      return basePoints;
+    }
+
+    // Tentar diferentes possíveis nomes de campo para dificuldade
+    let difficulty = 1;
+
+    if (question.dificuldade !== undefined) {
+      difficulty = question.dificuldade;
+    } else if (question.difficulty !== undefined) {
+      difficulty = question.difficulty;
+    } else if (question.nivel !== undefined) {
+      difficulty = question.nivel;
+    }
+
+    // Garantir que a dificuldade seja um número válido
+    difficulty = Number(difficulty) || 1;
+
+    const points = basePoints * difficulty;
+
+    console.log("💰 Pontos calculados:", {
+      basePoints,
+      difficulty,
+      total: points,
+      questionId: question.id,
+    });
+
+    return points;
   }
 }

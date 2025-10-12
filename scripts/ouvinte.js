@@ -49,12 +49,12 @@ class ListenerManager {
       nextButton.addEventListener("click", () => {
         if (gameManager.currentRound < gameManager.totalRounds) {
           console.log(
-            "➡️ Ouvinte avançando para rodada:",
+            "➡️ Ouvinte avançando LOCALMENTE para rodada:",
             gameManager.currentRound + 1
           );
           gameManager.currentRound++;
           gameManager.updateRoundDisplay();
-          gameManager.loadQuestionForCurrentRound();
+          gameManager.loadQuestionForCurrentRound(); // APENAS LOCAL - NÃO ATUALIZA FIREBASE
           ListenerManager.updateInterface(
             gameManager.currentRound,
             gameManager.totalRounds
@@ -66,9 +66,13 @@ class ListenerManager {
     if (prevButton) {
       prevButton.addEventListener("click", () => {
         if (gameManager.currentRound > 1) {
+          console.log(
+            "⬅️ Ouvinte voltando LOCALMENTE para rodada:",
+            gameManager.currentRound - 1
+          );
           gameManager.currentRound--;
           gameManager.updateRoundDisplay();
-          gameManager.loadQuestionForCurrentRound();
+          gameManager.loadQuestionForCurrentRound(); // APENAS LOCAL - NÃO ATUALIZA FIREBASE
           ListenerManager.updateInterface(
             gameManager.currentRound,
             gameManager.totalRounds
@@ -79,6 +83,7 @@ class ListenerManager {
 
     if (finishButton) {
       finishButton.addEventListener("click", () => {
+        console.log("🏁 Ouvinte finalizando jogo");
         finishButton.disabled = true;
         finishButton.classList.add("disabled-btn");
         gameManager.playerFinishedGame();

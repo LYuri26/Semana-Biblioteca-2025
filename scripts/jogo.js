@@ -49,59 +49,48 @@ class GameManager {
       await this.determinePlayerRole();
       console.log("🎭 Papel do jogador determinado:", this.playerRole);
 
-      // Carregar perguntas (agora sem fallback)
-      await this.loadQuestions();
-      console.log("📚 Perguntas carregadas:", this.selectedQuestions.length);
+      // Carregar todas as perguntas disponíveis
+      await this.loadAllQuestions();
+      console.log("📚 Todas as perguntas carregadas:", this.questions.length);
 
-      // Resto do código permanece igual...
+      // SINCRONIZAR AS PERGUNTAS SELECIONADAS PARA A DUPLA
+      await this.syncSelectedQuestions();
+      console.log(
+        "🔄 Perguntas sincronizadas para a dupla:",
+        this.selectedQuestions.length
+      );
+
+      // Inicializar interface
       this.initializeUI();
+
+      // Configurar listeners do Firebase
       this.setupFirebaseListeners();
+
+      // Iniciar timer do jogo
       this.startGameTimer();
 
+      // CARREGAMENTO COM PERGUNTAS SINCRONIZADAS
       if (this.playerRole === "ouvinte") {
-        console.log("🎧 Ouvinte - preparando primeira pergunta");
-        await firebaseDB.db
-          .ref(`birdbox/games/${this.gameId}/currentRound`)
-          .set(1);
-        await this.loadNextQuestion();
+        console.log("🎧 Ouvinte - carregando primeira pergunta SINCRONIZADA");
+        this.currentRound = 1;
+        await this.loadQuestionForCurrentRound();
+        console.log(
+          "✅ Ouvinte carregou pergunta 1 - Pronto para reproduzir áudio"
+        );
       } else {
-        console.log("🔍 Adivinhador - verificando estado atual do jogo");
-
-        const questionSnapshot = await firebaseDB.db
-          .ref(`birdbox/games/${this.gameId}/currentQuestion`)
-          .once("value");
-        const currentQuestionId = questionSnapshot.val();
-
-        const roundSnapshot = await firebaseDB.db
-          .ref(`birdbox/games/${this.gameId}/currentRound`)
-          .once("value");
-        const currentRound = roundSnapshot.val();
-
-        console.log("📊 Estado inicial do jogo:", {
-          currentQuestionId,
-          currentRound,
-          totalRounds: this.totalRounds,
-          questionsDisponiveis: this.questions.length,
-          selectedQuestions: this.selectedQuestions.map((q) => q.id),
-        });
-
-        if (currentRound) {
-          this.currentRound = currentRound;
-          this.updateRoundDisplay();
-          console.log("🔄 Rodada definida para:", this.currentRound);
-        }
-
-        if (currentQuestionId) {
-          console.log("🔄 Carregando pergunta existente...", currentQuestionId);
-          await this.loadQuestionForIdentifier(currentQuestionId);
-        } else {
-          console.log("⏳ Nenhuma pergunta ativa - aguardando ouvinte");
-          IdentifierManager.showWaitingState();
-        }
+        console.log(
+          "🔍 Adivinhador - carregando primeira pergunta SINCRONIZADA"
+        );
+        this.currentRound = 1;
+        await this.loadQuestionForCurrentRound();
+        console.log("✅ Adivinhador carregou pergunta 1 - Opções disponíveis");
       }
 
       this.hideLoadingScreen();
-      console.log("✅ Jogo inicializado com sucesso!");
+
+      console.log(
+        "✅ Jogo inicializado com sucesso! PERGUNTAS SINCRONIZADAS para a dupla"
+      );
     } catch (error) {
       console.error("❌ Erro ao inicializar jogo:", error);
       alert(
@@ -109,6 +98,106 @@ class GameManager {
       );
       window.location.href = "index.html";
     }
+  }
+
+  // Sincronizar as perguntas selecionadas para a dupla
+  async syncSelectedQuestions() {
+    try {
+      console.log("🔄 Sincronizando perguntas para a dupla...");
+
+      // VERIFICAR ESTRUTURA DAS PERGUNTAS
+      console.log("🔍 Estrutura da primeira pergunta:", this.questions[0]);
+
+      console.log("🔄 Sincronizando perguntas para a dupla...");
+
+      // Verificar se já existe uma seleção de perguntas no Firebase
+      const questionsSnapshot = await firebaseDB.db
+        .ref(`birdbox/games/${this.gameId}/selectedQuestions`)
+        .once("value");
+
+      const existingQuestions = questionsSnapshot.val();
+
+      if (existingQuestions && existingQuestions.length > 0) {
+        // Já existe uma seleção - usar a mesma
+        console.log(
+          "📋 Usando perguntas já selecionadas no Firebase:",
+          existingQuestions
+        );
+
+        // Encontrar as perguntas completas baseadas nos IDs
+        this.selectedQuestions = existingQuestions
+          .map((questionId) => this.questions.find((q) => q.id === questionId))
+          .filter((q) => q !== undefined);
+
+        console.log(
+          "✅ Perguntas recuperadas do Firebase:",
+          this.selectedQuestions.map((q) => q.id)
+        );
+      } else {
+        // Primeiro jogador - criar nova seleção
+        console.log("🎲 Primeiro jogador - criando nova seleção de perguntas");
+
+        // Selecionar 4 perguntas aleatórias
+        const shuffled = Utils.shuffleArray([...this.questions]);
+        this.selectedQuestions = shuffled.slice(0, this.totalRounds);
+
+        console.log(
+          "📝 Novas perguntas selecionadas:",
+          this.selectedQuestions.map((q) => q.id)
+        );
+
+        // Salvar no Firebase para o outro jogador usar
+        const questionIds = this.selectedQuestions.map((q) => q.id);
+        await firebaseDB.db
+          .ref(`birdbox/games/${this.gameId}/selectedQuestions`)
+          .set(questionIds);
+
+        console.log("💾 Perguntas salvas no Firebase para sincronização");
+      }
+
+      // Garantir que temos exatamente 4 perguntas
+      if (this.selectedQuestions.length !== this.totalRounds) {
+        console.error(
+          "❌ Número incorreto de perguntas selecionadas:",
+          this.selectedQuestions.length
+        );
+        // Fallback: usar as primeiras 4 perguntas
+        this.selectedQuestions = this.questions.slice(0, this.totalRounds);
+        console.log(
+          "🔄 Usando fallback:",
+          this.selectedQuestions.map((q) => q.id)
+        );
+      }
+
+      console.log(
+        "🎯 Perguntas finais sincronizadas:",
+        this.selectedQuestions.map((q) => ({
+          id: q.id,
+          pergunta: q.pergunta,
+          som: q.som,
+        }))
+      );
+    } catch (error) {
+      console.error("❌ Erro ao sincronizar perguntas:", error);
+      // Fallback: selecionar perguntas localmente
+      const shuffled = Utils.shuffleArray([...this.questions]);
+      this.selectedQuestions = shuffled.slice(0, this.totalRounds);
+      console.log(
+        "🔄 Usando fallback local devido a erro:",
+        this.selectedQuestions.map((q) => q.id)
+      );
+    }
+  }
+
+  // Carregar todas as perguntas disponíveis
+  async loadAllQuestions() {
+    const questionData = await QuestionManager.loadQuestions();
+    this.questions = questionData.questions;
+    this.wrongOptionsPool = questionData.wrongOptionsPool;
+    this.totalRounds = questionData.totalRounds;
+    this.totalTime = questionData.totalTime;
+
+    console.log("📖 Todas as perguntas carregadas:", this.questions.length);
   }
 
   // Determinar o papel do jogador
@@ -247,58 +336,102 @@ class GameManager {
 
   // Configurar listeners do Firebase
   setupFirebaseListeners() {
-    this.gameListener = firebaseDB.db
-      .ref(`birdbox/games/${this.gameId}`)
-      .on("value", (snapshot) => {
-        const gameData = snapshot.val();
-        if (!gameData) return;
-        this.updateGameState(gameData);
-      });
+    console.log("🔌 Configurando listeners do Firebase...", {
+      gameId: this.gameId,
+      playerRole: this.playerRole,
+    });
 
-    if (this.playerRole === "adivinhador") {
-      this.questionListener = firebaseDB.db
-        .ref(`birdbox/games/${this.gameId}/currentQuestion`)
-        .on("value", async (snapshot) => {
-          const questionId = snapshot.val();
-          if (questionId && questionId !== (this.currentQuestion?.id || null)) {
-            await this.loadQuestionForIdentifier(questionId);
-          }
-        });
-
-      // APENAS O ADIVINHADOR SINCRONIZA RODADA COM FIREBASE
-      this.roundListener = firebaseDB.db
-        .ref(`birdbox/games/${this.gameId}/currentRound`)
+    try {
+      // LISTENER PARA PERGUNTAS SELECIONADAS (apenas para backup/resync)
+      this.questionsListener = firebaseDB.db
+        .ref(`birdbox/games/${this.gameId}/selectedQuestions`)
         .on("value", (snapshot) => {
-          const round = snapshot.val();
-          if (round && round !== this.currentRound) {
-            this.currentRound = round;
-            this.updateRoundDisplay();
-            IdentifierManager.resetAnswerInterface();
+          const questionIds = snapshot.val();
+          if (questionIds && questionIds.length > 0) {
+            console.log(
+              "📋 Firebase: Perguntas selecionadas atualizadas",
+              questionIds
+            );
+            // Pode ser usado para verificar se há discrepância
           }
         });
-    } else {
-      // OUVINTE NÃO SINCRONIZA RODADA - NAVEGAÇÃO É INDEPENDENTE
-      console.log("Ouvinte: navegação local independente habilitada");
-    }
 
-    // Listener para verificar se ambos finalizaram
-    this.playersListener = firebaseDB.db
-      .ref(`birdbox/games/${this.gameId}/jogadores`)
-      .on("value", (snapshot) => {
-        this.checkIfBothPlayersFinished(snapshot.val());
-      });
+      // LISTENER PARA PONTUAÇÃO E STATUS
+      this.gameListener = firebaseDB.db
+        .ref(`birdbox/games/${this.gameId}`)
+        .on("value", (snapshot) => {
+          const gameData = snapshot.val();
+          if (!gameData) return;
+          this.updateGameState(gameData);
+        });
+
+      // Listener para verificar se ambos finalizaram
+      this.playersListener = firebaseDB.db
+        .ref(`birdbox/games/${this.gameId}/jogadores`)
+        .on("value", (snapshot) => {
+          const playersData = snapshot.val();
+          this.checkIfBothPlayersFinished(playersData);
+        });
+
+      console.log("✅ Listeners do Firebase configurados");
+    } catch (error) {
+      console.error("❌ Erro ao configurar listeners do Firebase:", error);
+    }
   }
 
-  // Atualizar estado do jogo
+  cleanupFirebaseListeners() {
+    console.log("🧹 Limpando listeners do Firebase...");
+
+    const listeners = [
+      { name: "questionsListener", ref: this.questionsListener },
+      { name: "gameListener", ref: this.gameListener },
+      { name: "playersListener", ref: this.playersListener },
+    ];
+
+    listeners.forEach((listener) => {
+      if (listener.ref) {
+        try {
+          // Desconectar o listener específico
+          if (listener.name === "questionsListener") {
+            firebaseDB.db
+              .ref(`birdbox/games/${this.gameId}/selectedQuestions`)
+              .off("value", listener.ref);
+          } else {
+            firebaseDB.db
+              .ref(`birdbox/games/${this.gameId}`)
+              .off("value", listener.ref);
+          }
+          console.log(`✅ Listener ${listener.name} removido`);
+        } catch (error) {
+          console.error(`❌ Erro ao remover listener ${listener.name}:`, error);
+        }
+      }
+    });
+
+    // Limpar referências
+    this.questionsListener = null;
+    this.gameListener = null;
+    this.playersListener = null;
+
+    console.log("✅ Todos os listeners foram limpos");
+  }
+
+  // Atualizar estado do jogo - APENAS PONTUAÇÃO E STATUS FINAL
   updateGameState(gameData) {
+    // Verificar se o jogo foi finalizado
     if (gameData.status === "finalizado") {
       this.endGame();
       return;
     }
 
+    // Apenas atualizar pontuação do próprio jogador
     if (gameData.jogadores && gameData.jogadores[this.playerId]) {
       const newScore = gameData.jogadores[this.playerId].pontuacao;
       if (newScore !== this.score) {
+        console.log("🔄 Pontuação atualizada via Firebase:", {
+          antigo: this.score,
+          novo: newScore,
+        });
         this.score = newScore;
         this.updateScoreDisplay();
       }
@@ -384,42 +517,76 @@ class GameManager {
     }
   }
 
-  // Carregar pergunta da rodada atual
+  // Carregar pergunta da rodada atual - PARA AMBOS OS JOGADORES
+  // Carregar pergunta da rodada atual - PARA AMBOS OS JOGADORES (COMPLETAMENTE INDEPENDENTES)
   async loadQuestionForCurrentRound() {
     if (this.currentRound <= this.totalRounds) {
-      this.currentQuestion = this.selectedQuestions[this.currentRound - 1];
+      try {
+        console.log(
+          "🔄 Carregando pergunta da rodada:",
+          this.currentRound,
+          "- Papel:",
+          this.playerRole
+        );
 
-      console.log("🎧 Ouvinte carregando pergunta:", {
-        round: this.currentRound,
-        questionId: this.currentQuestion.id,
-        pergunta: this.currentQuestion.pergunta,
-      });
+        // Busca a pergunta correspondente à rodada atual (AMBOS OS JOGADORES)
+        this.currentQuestion = this.selectedQuestions[this.currentRound - 1];
 
-      // APENAS O OUVINTE ATUALIZA A PERGUNTA NO FIREBASE
-      if (this.playerRole === "ouvinte") {
-        console.log("📤 Enviando pergunta para Firebase...");
-        await firebaseDB.db
-          .ref(`birdbox/games/${this.gameId}/currentRound`)
-          .set(this.currentRound);
+        if (!this.currentQuestion) {
+          console.error(
+            "❌ Pergunta não encontrada para rodada:",
+            this.currentRound
+          );
+          return;
+        }
 
-        await firebaseDB.db
-          .ref(`birdbox/games/${this.gameId}/currentQuestion`)
-          .set(this.currentQuestion.id);
+        console.log("📋 Dados da pergunta:", {
+          round: this.currentRound,
+          questionId: this.currentQuestion.id,
+          pergunta: this.currentQuestion.pergunta,
+          som: this.currentQuestion.som,
+        });
 
-        console.log("✅ Pergunta enviada para Firebase");
+        // *** REMOVIDO: OUVINTE NÃO ATUALIZA MAIS O FIREBASE AO NAVEGAR ***
+        // CADA JOGADOR É COMPLETAMENTE INDEPENDENTE
+
+        // Prepara as opções (apenas em memória local - AMBOS OS JOGADORES)
+        const preparedOptions = QuestionManager.prepareQuestionOptions(
+          this.currentQuestion,
+          this.wrongOptionsPool
+        );
+        this.currentQuestion.displayOptions = preparedOptions.options;
+        this.currentQuestion.correctDisplayIndex = preparedOptions.correctIndex;
+
+        // ATUALIZA INTERFACE CONFORME O PAPEL
+        if (this.playerRole === "ouvinte") {
+          console.log(
+            "🎵 Ouvinte preparando áudio para rodada",
+            this.currentRound
+          );
+          ListenerManager.prepareAudio(this.currentQuestion);
+          ListenerManager.updateInterface(this.currentRound, this.totalRounds);
+        } else {
+          console.log(
+            "🎯 Adivinhador preparando opções para rodada",
+            this.currentRound
+          );
+          IdentifierManager.updateOptions(this.currentQuestion);
+          this.updateRoundDisplay();
+        }
+
+        console.log(
+          "✅",
+          this.playerRole,
+          "carregou pergunta",
+          this.currentRound,
+          "LOCALMENTE"
+        );
+      } catch (error) {
+        console.error("❌ Erro em loadQuestionForCurrentRound:", error);
       }
-
-      const preparedOptions = QuestionManager.prepareQuestionOptions(
-        this.currentQuestion,
-        this.wrongOptionsPool
-      );
-      this.currentQuestion.displayOptions = preparedOptions.options;
-      this.currentQuestion.correctDisplayIndex = preparedOptions.correctIndex;
-
-      if (this.playerRole === "ouvinte") {
-        ListenerManager.prepareAudio(this.currentQuestion);
-        ListenerManager.updateInterface(this.currentRound, this.totalRounds);
-      }
+    } else {
+      console.log("🏁", this.playerRole, "completou todas as rodadas");
     }
   }
 
@@ -427,38 +594,59 @@ class GameManager {
     if (this.isAdvancing) return;
     this.isAdvancing = true;
 
-    // APENAS O ADIVINHADOR AVANÇA ATRAVÉS DESTE MÉTODO
-    if (this.playerRole === "adivinhador") {
-      this.questionListener = firebaseDB.db
-        .ref(`birdbox/games/${this.gameId}/currentQuestion`)
-        .on("value", async (snapshot) => {
-          const questionId = snapshot.val();
-          console.log("📥 Adivinhador recebeu questionId:", questionId);
+    console.log("🔄 Iniciando advanceToNextRound...", {
+      role: this.playerRole,
+      currentRound: this.currentRound,
+      totalRounds: this.totalRounds,
+    });
 
-          if (questionId) {
-            await this.loadQuestionForIdentifier(questionId);
-          } else {
-            console.log("⏳ Aguardando pergunta do ouvinte...");
-            IdentifierManager.showWaitingState();
-          }
-        });
+    try {
+      // AMBOS OS JOGADORES AVANÇAM LOCALMENTE
+      if (this.currentRound < this.totalRounds) {
+        this.currentRound++;
+        console.log(
+          "➡️",
+          this.playerRole,
+          "avançou para rodada:",
+          this.currentRound
+        );
 
-      // APENAS O ADIVINHADOR SINCRONIZA RODADA COM FIREBASE
-      this.roundListener = firebaseDB.db
-        .ref(`birdbox/games/${this.gameId}/currentRound`)
-        .on("value", (snapshot) => {
-          const round = snapshot.val();
-          console.log("📥 Adivinhador recebeu round:", round);
-          if (round && round !== this.currentRound) {
-            this.currentRound = round;
-            this.updateRoundDisplay();
-            IdentifierManager.resetAnswerInterface();
-          }
-        });
+        // Atualiza display da rodada
+        this.updateRoundDisplay();
+
+        // Carrega a próxima pergunta LOCALMENTE
+        await this.loadQuestionForCurrentRound();
+
+        console.log(
+          "✅",
+          this.playerRole,
+          "carregou pergunta",
+          this.currentRound,
+          "localmente"
+        );
+      } else if (this.currentRound === this.totalRounds) {
+        // Última rodada - não avança mais
+        console.log(
+          "🎯",
+          this.playerRole,
+          "na última rodada:",
+          this.currentRound
+        );
+        this.currentRound = this.totalRounds;
+        this.updateRoundDisplay();
+
+        if (this.currentRound >= this.totalRounds) {
+          console.log("🏁", this.playerRole, "completou todas as rodadas");
+        }
+      }
+    } catch (error) {
+      console.error("❌ Erro em advanceToNextRound:", error);
+    } finally {
+      setTimeout(() => {
+        this.isAdvancing = false;
+        console.log("✅ advanceToNextRound concluído");
+      }, 100);
     }
-    setTimeout(() => {
-      this.isAdvancing = false;
-    }, 100);
   }
 
   // Quando um jogador finaliza
@@ -594,32 +782,19 @@ class GameManager {
 
   // Reiniciar o jogo
   restartGame() {
-    if (this.gameListener) {
-      firebaseDB.db
-        .ref(`birdbox/games/${this.gameId}`)
-        .off("value", this.gameListener);
-    }
-    if (this.descriptionListener) {
-      firebaseDB.db
-        .ref(`birdbox/games/${this.gameId}/currentDescription`)
-        .off("value", this.descriptionListener);
-    }
-    if (this.roundListener) {
-      firebaseDB.db
-        .ref(`birdbox/games/${this.gameId}/currentRound`)
-        .off("value", this.roundListener);
-    }
-    if (this.questionListener) {
-      firebaseDB.db
-        .ref(`birdbox/games/${this.gameId}/currentQuestion`)
-        .off("value", this.questionListener);
-    }
-    if (this.playersListener) {
-      firebaseDB.db
-        .ref(`birdbox/games/${this.gameId}/jogadores`)
-        .off("value", this.playersListener);
+    console.log("🔄 Reiniciando jogo...");
+
+    // Limpar todos os listeners primeiro
+    this.cleanupFirebaseListeners();
+
+    // Limpar intervalos de tempo
+    if (this.timerInterval) {
+      clearInterval(this.timerInterval);
+      this.timerInterval = null;
     }
 
+    // Recarregar a página
+    console.log("🔄 Recarregando página...");
     window.location.reload();
   }
 
