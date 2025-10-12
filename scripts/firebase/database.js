@@ -1,4 +1,4 @@
-// Funções de banco de dados do Firebase para o Jogo BirdBox
+// database.js - VERSÃO COMPLETAMENTE CORRIGIDA
 
 class FirebaseDatabase {
   constructor() {
@@ -9,14 +9,54 @@ class FirebaseDatabase {
     this.questionsRef = this.db.ref("birdbox/questions");
   }
 
-  // Adicionar jogador à fila de espera
+  // Adicionar jogador à fila - CORREÇÃO TOTAL
   async addPlayerToQueue(playerId, playerName) {
     try {
+      console.log(`🎯 Tentando adicionar ${playerName} (${playerId}) à fila`);
+
+      // VERIFICAÇÃO CRÍTICA: jogador já está na fila?
+      const alreadyInQueue = await this.isPlayerInQueue(playerId);
+      if (alreadyInQueue) {
+        console.log(`⚠️ ${playerName} já está na fila, ignorando...`);
+        return true; // Retorna true pois já está na fila
+      }
+
+      // VERIFICAÇÃO CRÍTICA: jogador já está em jogo ativo?
+      const inActiveGame = await this.isPlayerInActiveGame(playerId);
+      if (inActiveGame) {
+        console.log(
+          `❌ ${playerName} já está em jogo ativo, não pode entrar na fila`
+        );
+        return false;
+      }
+
+      // Obter fila atual ordenada por timestamp
+      const queueSnapshot = await this.queueRef
+        .orderByChild("timestamp")
+        .once("value");
+      const queue = queueSnapshot.val() || {};
+
+      const queueArray = Object.entries(queue)
+        .map(([id, data]) => ({ id, ...data }))
+        .sort((a, b) => a.timestamp - b.timestamp);
+
+      // Calcular nova posição
+      const position = queueArray.length + 1;
+      const papel = position % 2 === 1 ? "ouvinte" : "leitor";
+
+      console.log(
+        `✅ ${playerName} adicionado à fila: posição ${position}, ${papel}`
+      );
+
+      // Adicionar à fila
       await this.queueRef.child(playerId).set({
         nome: playerName,
         timestamp: Date.now(),
         status: "esperando",
+        position: position,
+        papel: papel,
       });
+
       return true;
     } catch (error) {
       console.error("Erro ao adicionar à fila:", error);
@@ -28,10 +68,182 @@ class FirebaseDatabase {
   async removePlayerFromQueue(playerId) {
     try {
       await this.queueRef.child(playerId).remove();
+      console.log(`🗑️ ${playerId} removido da fila`);
       return true;
     } catch (error) {
       console.error("Erro ao remover da fila:", error);
       return false;
+    }
+  }
+
+  // Obter fila ordenada - CORRIGIDO
+  async getOrderedQueue() {
+    try {
+      const snapshot = await this.queueRef
+        .orderByChild("timestamp")
+        .once("value");
+      const queue = snapshot.val();
+
+      if (!queue) return [];
+
+      const queueArray = Object.entries(queue)
+        .map(([id, data]) => ({ id, ...data }))
+        .sort((a, b) => a.timestamp - b.timestamp);
+
+      console.log(`📊 Fila obtida: ${queueArray.length} jogadores`);
+      queueArray.forEach((player, index) => {
+        console.log(`   ${index + 1}. ${player.nome} (${player.id})`);
+      });
+
+      return queueArray;
+    } catch (error) {
+      console.error("Erro ao obter fila ordenada:", error);
+      return [];
+    }
+  }
+
+  // Criar jogo - CORREÇÃO RADICAL
+  async createNewGame(player1Id, player1Data, player2Id, player2Data) {
+    try {
+      console.log(`🎮 CRIANDO JOGO: ${player1Data.nome} + ${player2Data.nome}`);
+
+      // VERIFICAÇÃO EXTREMA: são jogadores diferentes?
+      if (player1Id === player2Id) {
+        console.log(
+          `❌ ERRO CRÍTICO: Mesmo jogador (${player1Id}) tentando criar jogo consigo mesmo`
+        );
+        await this.removePlayerFromQueue(player1Id);
+        return null;
+      }
+
+      // VERIFICAÇÃO: ambos ainda na fila?
+      const player1InQueue = await this.isPlayerInQueue(player1Id);
+      const player2InQueue = await this.isPlayerInQueue(player2Id);
+
+      if (!player1InQueue || !player2InQueue) {
+        console.log(
+          `❌ Um dos jogadores saiu da fila: ${
+            player1InQueue ? "P1 OK" : "P1 FALTOU"
+          }, ${player2InQueue ? "P2 OK" : "P2 FALTOU"}`
+        );
+        return null;
+      }
+
+      const gameId = this.generateGameId();
+
+      // Definir papéis corretamente
+      const player1Papel =
+        player1Data.position % 2 === 1 ? "ouvinte" : "leitor";
+      const player2Papel =
+        player2Data.position % 2 === 1 ? "ouvinte" : "leitor";
+
+      // CORREÇÃO: garantir um ouvinte e um leitor
+      const finalPlayer1Papel = player1Papel;
+      const finalPlayer2Papel =
+        player1Papel === "ouvinte" ? "leitor" : "ouvinte";
+
+      console.log(
+        `📊 Papéis: ${player1Data.nome}=${finalPlayer1Papel}, ${player2Data.nome}=${finalPlayer2Papel}`
+      );
+
+      // Obter perguntas
+      const questions = await this.getRandomQuestions(5);
+      if (questions.length === 0) {
+        console.log("❌ Nenhuma pergunta disponível, cancelando jogo");
+        return null;
+      }
+
+      const gameData = {
+        jogadores: {
+          [player1Id]: {
+            nome: player1Data.nome,
+            papel: finalPlayer1Papel,
+            pontuacao: 0,
+            status: "conectado",
+            ready: false,
+          },
+          [player2Id]: {
+            nome: player2Data.nome,
+            papel: finalPlayer2Papel,
+            pontuacao: 0,
+            status: "conectado",
+            ready: false,
+          },
+        },
+        status: "ativo",
+        timestamp: Date.now(),
+        currentQuestionIndex: 0,
+        selectedQuestions: questions,
+        round: 1,
+        maxRounds: 5,
+        duracao: 0,
+      };
+
+      // 🔒 ORDEM CRÍTICA
+
+      // 1. PRIMEIRO remover da fila
+      await this.removePlayerFromQueue(player1Id);
+      await this.removePlayerFromQueue(player2Id);
+
+      // 2. DEPOIS criar jogo
+      await this.gamesRef.child(gameId).set(gameData);
+
+      // 3. FINALMENTE atualizar referências
+      await this.db.ref(`birdbox/players/${player1Id}/currentGame`).set(gameId);
+      await this.db.ref(`birdbox/players/${player2Id}/currentGame`).set(gameId);
+
+      console.log(`🎉 JOGO CRIADO: ${gameId}`);
+      console.log(`   👂 ${player1Data.nome} (${finalPlayer1Papel})`);
+      console.log(`   📖 ${player2Data.nome} (${finalPlayer2Papel})`);
+      console.log(`   📝 ${questions.length} perguntas`);
+
+      return gameId;
+    } catch (error) {
+      console.error("❌ ERRO ao criar jogo:", error);
+      return null;
+    }
+  }
+
+  // Obter perguntas aleatórias - CORRIGIDO
+  async getRandomQuestions(count) {
+    try {
+      const snapshot = await this.questionsRef.once("value");
+      const allQuestions = snapshot.val();
+
+      if (!allQuestions) {
+        console.log("⚠️ Nenhuma pergunta no banco, usando padrão...");
+        // Perguntas padrão de emergência
+        return [
+          {
+            id: 1,
+            pergunta: "Qual é o seu livro favorito?",
+            opcoes: ["A", "B", "C", "D"],
+            resposta: 0,
+          },
+          {
+            id: 2,
+            pergunta: "Quem escreveu Dom Casmurro?",
+            opcoes: ["Machado", "Aluísio", "José", "Carlos"],
+            resposta: 0,
+          },
+          {
+            id: 3,
+            pergunta: "O que é um soneto?",
+            opcoes: ["Poema", "Romance", "Conto", "Crônica"],
+            resposta: 0,
+          },
+        ];
+      }
+
+      const questionArray = Object.values(allQuestions);
+      const shuffled = [...questionArray].sort(() => Math.random() - 0.5);
+      const selected = shuffled.slice(0, count);
+
+      console.log(`📝 ${selected.length} perguntas selecionadas`);
+      return selected;
+    } catch (error) {
+      console.error("Erro ao obter perguntas:", error);
+      return [];
     }
   }
 
@@ -42,6 +254,28 @@ class FirebaseDatabase {
       return snapshot.exists();
     } catch (error) {
       console.error("Erro ao verificar fila:", error);
+      return false;
+    }
+  }
+
+  // Verificar se jogador está em jogo ativo
+  async isPlayerInActiveGame(playerId) {
+    try {
+      const gameIdSnapshot = await this.db
+        .ref(`birdbox/players/${playerId}/currentGame`)
+        .once("value");
+      const gameId = gameIdSnapshot.val();
+
+      if (!gameId) return false;
+
+      const gameSnapshot = await this.db
+        .ref(`birdbox/games/${gameId}`)
+        .once("value");
+      const gameData = gameSnapshot.val();
+
+      return gameData && gameData.status === "ativo";
+    } catch (error) {
+      console.error("Erro ao verificar jogo ativo:", error);
       return false;
     }
   }
@@ -57,157 +291,14 @@ class FirebaseDatabase {
     }
   }
 
-  // Ouvir mudanças na fila de espera
-  listenToQueueChanges(callback) {
-    return this.queueRef.on("value", callback);
-  }
-
-  // Parar de ouvir mudanças na fila
-  stopListeningToQueue(listener) {
-    this.queueRef.off("value", listener);
-  }
-
-  // Criar uma nova partida
-  async createNewGame(player1Id, player1Name, player2Id, player2Name) {
-    try {
-      // Verificar se os jogadores já estão em algum jogo ativo
-      const player1InGame = await this.isPlayerInActiveGame(player1Id);
-      const player2InGame = await this.isPlayerInActiveGame(player2Id);
-
-      if (player1InGame || player2InGame) {
-        console.log(
-          "Um dos jogadores já está em jogo ativo. Cancelando criação."
-        );
-
-        // Remover da fila
-        await this.removePlayerFromQueue(player1Id);
-        await this.removePlayerFromQueue(player2Id);
-
-        return null;
-      }
-
-      const gameId = this.generateGameId();
-      const gameData = {
-        jogadores: {
-          [player1Id]: {
-            nome: player1Name,
-            papel: "ouvinte",
-            pontuacao: 0,
-            status: "conectado",
-          },
-          [player2Id]: {
-            nome: player2Name,
-            papel: "adivinhador",
-            pontuacao: 0,
-            status: "conectado",
-          },
-        },
-        status: "ativo",
-        timestamp: Date.now(),
-        currentQuestionIndex: 0,
-        round: 1,
-        duracao: 0,
-      };
-
-      await this.gamesRef.child(gameId).set(gameData);
-      return gameId;
-    } catch (error) {
-      console.error("Erro ao criar partida:", error);
-      return null;
-    }
-  }
-
-  // NOVA VERSÃO CORRIGIDA - database.js
-  async isPlayerInActiveGame(playerId) {
-    try {
-      const gameIdSnapshot = await this.db
-        .ref(`birdbox/players/${playerId}/currentGame`)
-        .once("value");
-      const gameId = gameIdSnapshot.val();
-
-      if (gameId) {
-        const gameSnapshot = await this.db
-          .ref(`birdbox/games/${gameId}`)
-          .once("value");
-        const gameData = gameSnapshot.val();
-
-        // VERIFICAÇÃO MAIS PRECISA - considerar apenas jogos realmente ativos
-        if (gameData && gameData.status === "ativo") {
-          console.log(
-            `⚠️ Jogador ${playerId} já está no jogo ativo: ${gameId}`
-          );
-          return true;
-        } else {
-          // Se o jogo não existe ou não está ativo, limpar a referência
-          console.log(
-            `🧹 Limpando referência de jogo inválida para ${playerId}`
-          );
-          await this.db.ref(`birdbox/players/${playerId}/currentGame`).remove();
-          return false;
-        }
-      }
-      return false;
-    } catch (error) {
-      console.error("Erro ao verificar jogo ativo:", error);
-      return false; // Em caso de erro, assumir que não está em jogo
-    }
-  }
-
   // Gerar ID único para a partida
   generateGameId() {
     return "game_" + Date.now() + "_" + Math.random().toString(36).substr(2, 9);
   }
 
-  // Obter perguntas do banco de dados
-  async getQuestions() {
-    try {
-      const snapshot = await this.questionsRef.once("value");
-      return snapshot.val();
-    } catch (error) {
-      console.error("Erro ao buscar perguntas:", error);
-      return null;
-    }
-  }
-
-  // Atualizar status do jogador
-  async updatePlayerStatus(gameId, playerId, status) {
-    try {
-      await this.gamesRef
-        .child(`${gameId}/jogadores/${playerId}/status`)
-        .set(status);
-      return true;
-    } catch (error) {
-      console.error("Erro ao atualizar status:", error);
-      return false;
-    }
-  }
-
-  // Atualizar pontuação do jogador
-  async updatePlayerScore(gameId, playerId, score) {
-    try {
-      await this.gamesRef
-        .child(`${gameId}/jogadores/${playerId}/pontuacao`)
-        .set(score);
-      return true;
-    } catch (error) {
-      console.error("Erro ao atualizar pontuação:", error);
-      return false;
-    }
-  }
-
-  // Finalizar partida
-  async endGame(gameId, scores) {
-    try {
-      await this.gamesRef.child(gameId).update({
-        status: "finalizado",
-        finalizadoEm: Date.now(),
-        pontuacaoFinal: scores,
-      });
-      return true;
-    } catch (error) {
-      console.error("Erro ao finalizar partida:", error);
-      return false;
-    }
+  // Parar de ouvir mudanças na fila
+  stopListeningToQueue(listener) {
+    this.queueRef.off("value", listener);
   }
 }
 

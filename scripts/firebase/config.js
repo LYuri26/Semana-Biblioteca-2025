@@ -13,37 +13,24 @@ const firebaseConfig = {
 
 // Inicializar Firebase
 try {
-  // Verificar se o Firebase já foi inicializado
   if (!firebase.apps.length) {
     firebase.initializeApp(firebaseConfig);
-    console.log("Firebase inicializado com sucesso para o Jogo BirdBox!");
-  } else {
-    firebase.app(); // Já inicializado, usar a instância existente
-    console.log("Firebase já estava inicializado");
+    console.log("Firebase inicializado com sucesso!");
   }
 
-  // Inicializar instância do banco de dados
+  // Inicializar banco de dados
   if (typeof FirebaseDatabase !== "undefined") {
     window.firebaseDB = new FirebaseDatabase();
     console.log("FirebaseDatabase inicializado");
   }
 
-  // Tentar iniciar sistema de pareamento
+  // Iniciar pareamento com delay maior
   setTimeout(() => {
     if (typeof matchingSystem !== "undefined" && matchingSystem.startMatching) {
+      console.log("Iniciando sistema de pareamento...");
       matchingSystem.startMatching();
     }
-  }, 2000);
+  }, 5000); // Aumentado para 5 segundos
 } catch (error) {
   console.error("Erro ao inicializar Firebase:", error);
-
-  // Tentar novamente após 3 segundos
-  setTimeout(() => {
-    try {
-      firebase.initializeApp(firebaseConfig);
-      console.log("Firebase inicializado na segunda tentativa");
-    } catch (retryError) {
-      console.error("Falha ao inicializar Firebase após retry:", retryError);
-    }
-  }, 3000);
 }
