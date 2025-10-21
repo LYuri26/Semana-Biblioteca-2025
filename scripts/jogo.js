@@ -492,6 +492,48 @@ class GameManager {
     }
   }
 
+  async saveFinalScore() {
+    try {
+      console.log("💾 Salvando pontuação final:", this.score);
+
+      // Atualizar status do jogo
+      await firebaseDB.db
+        .ref(`birdbox/games/${this.gameId}/status`)
+        .set("finalizado");
+
+      await firebaseDB.db
+        .ref(`birdbox/games/${this.gameId}/finalizadoEm`)
+        .set(Date.now());
+
+      // Garantir que a pontuação final está salva no jogo
+      await firebaseDB.db
+        .ref(
+          `birdbox/games/${this.gameId}/jogadores/${this.playerId}/pontuacao`
+        )
+        .set(this.score);
+
+      console.log("📊 Pontuação final salva no jogo:", this.score);
+
+      // 🎯 SALVAR NO RANKING INDIVIDUAL COM PONTUAÇÃO DINÂMICA
+      if (this.score > 0) {
+        const success = await firebaseDB.savePlayerScore(
+          this.playerId,
+          this.playerName,
+          this.score
+        );
+
+        if (success) {
+          console.log("✅ Pontuação salva no ranking com sucesso!");
+        } else {
+          console.warn("⚠️ Pontuação não foi salva no ranking");
+        }
+      }
+    } catch (error) {
+      console.error("Erro ao salvar pontuação final:", error);
+      throw error;
+    }
+  }
+
   // Inicializar interface conforme o papel
   initializeUI() {
     document.getElementById("listenerView").classList.add("hidden");
@@ -781,9 +823,10 @@ class GameManager {
     console.log(`🧹 ${removedCount} listeners removidos`);
   }
 
-  // Atualizar estado do jogo
+  // 🎯 ATUALIZAR O MÉTODO updateGameState
   updateGameState(gameData) {
-    if (gameData.status === "finalizado") {
+    if (gameData.status === "finalizado" && this.gameState !== "finished") {
+      console.log("📡 Listener: Jogo finalizado no Firebase");
       this.endGame();
       return;
     }
@@ -1026,10 +1069,14 @@ class GameManager {
     }
   }
 
+  // 🎯 CORRIGIR O MÉTODO checkIfBothPlayersFinished
   async checkIfBothPlayersFinished(playersData) {
-    if (!playersData) return;
+    if (!playersData || this.gameState === "finished") return;
+
     const allFinished = Object.values(playersData).every((p) => p.finalizado);
+
     if (allFinished) {
+      console.log("🎯 Ambos os jogadores finalizaram, encerrando jogo...");
       await this.endGame();
     }
   }
@@ -1098,10 +1145,101 @@ class GameManager {
   }
 
   async endGame() {
+    // 🎯 VERIFICAR SE JÁ ESTÁ FINALIZANDO PARA EVITAR LOOP
+    if (this.gameState === "finished" || this.isEndingGame) {
+      console.log("🛑 Jogo já está finalizando ou finalizado, ignorando...");
+      return;
+    }
+
+    this.isEndingGame = true;
+    console.log("🎯 Finalizando jogo e salvando pontuação da DUPLA...");
+
     clearInterval(this.timerInterval);
     this.gameState = "finished";
-    await this.saveFinalScore();
-    this.showGameOverScreen();
+
+    try {
+      // 🎯 CALCULAR PONTUAÇÃO TOTAL DA DUPLA
+      const teamScore = await firebaseDB.calculateTeamScore(this.gameId);
+
+      if (teamScore > 0) {
+        console.log(`💾 Salvando pontuação da dupla: ${teamScore} pontos`);
+
+        // 🎯 GERAR NOME DA DUPLA
+        const teamName = await firebaseDB.generateTeamName(this.gameId);
+
+        // 🎯 VERIFICAR SE JÁ EXISTE NO RANKING ANTES DE SALVAR
+        const alreadySaved = await this.checkIfTeamAlreadySaved(this.gameId);
+
+        if (!alreadySaved) {
+          // 🎯 SALVAR DUPLA NO RANKING
+          const success = await firebaseDB.saveTeamScore(
+            this.gameId,
+            teamName,
+            teamScore
+          );
+
+          if (success) {
+            console.log("✅ Dupla salva no ranking com sucesso!");
+          } else {
+            console.error("❌ Falha ao salvar dupla no ranking");
+          }
+        } else {
+          console.log("📊 Dupla já salva no ranking, ignorando...");
+        }
+      } else {
+        console.log("📊 Pontuação zero - não salvando no ranking");
+      }
+
+      // 2. Atualizar status do jogo no Firebase
+      await this.saveFinalGameStatus();
+
+      this.showGameOverScreen();
+    } catch (error) {
+      console.error("❌ Erro ao finalizar jogo:", error);
+      this.showGameOverScreen();
+    } finally {
+      this.isEndingGame = false;
+    }
+  }
+
+  // 🎯 NOVO MÉTODO: Verificar se a dupla já foi salva
+  async checkIfTeamAlreadySaved(gameId) {
+    try {
+      const rankingSnapshot = await firebaseDB.db
+        .ref("birdbox/ranking")
+        .orderByChild("gameId")
+        .equalTo(gameId)
+        .once("value");
+
+      return rankingSnapshot.exists();
+    } catch (error) {
+      console.error("❌ Erro ao verificar dupla no ranking:", error);
+      return false;
+    }
+  }
+
+  // 🎯 NOVO MÉTODO: Salvar status final do jogo
+  async saveFinalGameStatus() {
+    try {
+      await firebaseDB.db
+        .ref(`birdbox/games/${this.gameId}/status`)
+        .set("finalizado");
+
+      await firebaseDB.db
+        .ref(`birdbox/games/${this.gameId}/finalizadoEm`)
+        .set(Date.now());
+
+      await firebaseDB.db
+        .ref(
+          `birdbox/games/${this.gameId}/jogadores/${this.playerId}/pontuacao`
+        )
+        .set(this.score);
+
+      console.log("📊 Status final do jogo salvo");
+    } catch (error) {
+      console.error("❌ Erro ao salvar status final:", error);
+      throw error;
+    }
   }
 
   async saveFinalScore() {

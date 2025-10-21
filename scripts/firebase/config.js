@@ -34,3 +34,13 @@ try {
 } catch (error) {
   console.error("Erro ao inicializar Firebase:", error);
 }
+
+setTimeout(async () => {
+  if (
+    typeof firebaseDB !== "undefined" &&
+    firebaseDB.initializeRankingStructure
+  ) {
+    await firebaseDB.initializeRankingStructure();
+    console.log("✅ Estrutura do ranking verificada/criada");
+  }
+}, 2000);

@@ -101,7 +101,118 @@ class FirebaseDatabase {
       return [];
     }
   }
+  async saveTeamScore(gameId, teamName, score) {
+    try {
+      console.log(
+        `💾 Salvando DUPLA no ranking: ${teamName} - ${score} pontos`
+      );
 
+      // 🎯 VERIFICAR SE JÁ EXISTE ANTES DE SALVAR
+      const existingSnapshot = await this.db
+        .ref("birdbox/ranking")
+        .orderByChild("gameId")
+        .equalTo(gameId)
+        .once("value");
+
+      if (existingSnapshot.exists()) {
+        console.log("📊 Dupla já existe no ranking, atualizando...");
+        const existingKey = Object.keys(existingSnapshot.val())[0];
+
+        await this.db.ref(`birdbox/ranking/${existingKey}`).update({
+          nome: teamName,
+          pontuacao: score,
+          ultimaAtualizacao: new Date().toISOString(),
+        });
+      } else {
+        // 🎯 SALVAR NOVA DUPLA
+        const rankingRef = this.db.ref("birdbox/ranking").push();
+
+        await rankingRef.set({
+          nome: teamName,
+          pontuacao: score,
+          data: Date.now(),
+          jogos: 1,
+          ultimaAtualizacao: new Date().toISOString(),
+          gameId: gameId,
+          tipo: "dupla",
+        });
+      }
+
+      console.log(
+        `✅ Dupla salva/atualizada no ranking: ${teamName} - ${score} pontos`
+      );
+      return true;
+    } catch (error) {
+      console.error("❌ Erro ao salvar dupla no ranking:", error);
+      return false;
+    }
+  }
+  // MÉTODO PARA CALCULAR PONTUAÇÃO TOTAL DA DUPLA
+  async calculateTeamScore(gameId) {
+    try {
+      const gameSnapshot = await this.db
+        .ref(`birdbox/games/${gameId}/jogadores`)
+        .once("value");
+      const players = gameSnapshot.val();
+
+      if (!players) return 0;
+
+      let totalScore = 0;
+      Object.values(players).forEach((player) => {
+        totalScore += player.pontuacao || 0;
+      });
+
+      console.log(`📊 Pontuação total da dupla: ${totalScore}`);
+      return totalScore;
+    } catch (error) {
+      console.error("❌ Erro ao calcular pontuação da dupla:", error);
+      return 0;
+    }
+  }
+
+  // 🎯 MÉTODO PARA GERAR NOME DA DUPLA
+  async generateTeamName(gameId) {
+    try {
+      const gameSnapshot = await this.db
+        .ref(`birdbox/games/${gameId}/jogadores`)
+        .once("value");
+      const players = gameSnapshot.val();
+
+      if (!players) return "Dupla Anônima";
+
+      const playerNames = Object.values(players)
+        .map((p) => p.nome)
+        .filter((name) => name && name.trim() !== "");
+
+      if (playerNames.length === 2) {
+        return `${playerNames[0]} & ${playerNames[1]}`;
+      } else if (playerNames.length === 1) {
+        return `${playerNames[0]} & Parceiro`;
+      } else {
+        return "Dupla Misteriosa";
+      }
+    } catch (error) {
+      console.error("❌ Erro ao gerar nome da dupla:", error);
+      return "Dupla do BirdBox";
+    }
+  }
+  async initializeRankingStructure() {
+    try {
+      const rankingRef = this.db.ref("birdbox/ranking");
+      const snapshot = await rankingRef.once("value");
+
+      if (!snapshot.exists()) {
+        console.log("🏗️ Criando estrutura inicial do ranking...");
+        await rankingRef.set({
+          _initialized: true,
+          _createdAt: Date.now(),
+          _description: "Ranking do BirdBox Game",
+        });
+      }
+    } catch (error) {
+      console.error("❌ Erro ao inicializar ranking:", error);
+    }
+  }
   // Criar jogo - CORREÇÃO RADICAL
   async createNewGame(player1Id, player1Data, player2Id, player2Data) {
     try {
