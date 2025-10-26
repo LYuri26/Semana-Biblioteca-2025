@@ -20,6 +20,16 @@ class ShareManager {
     );
   }
 
+  // Detectar se é iOS
+  isIOS() {
+    return /iPad|iPhone|iPod/.test(navigator.userAgent);
+  }
+
+  // Detectar se é Android
+  isAndroid() {
+    return /Android/.test(navigator.userAgent);
+  }
+
   // Abrir modal de compartilhamento para uma dupla específica
   async openShareModal(teamIndex) {
     try {
@@ -286,35 +296,35 @@ class ShareManager {
     }
   }
 
-  // DEEP LINKS CORRIGIDOS PARA APLICATIVOS NATIVOS
+  // MÉTODOS DE COMPARTILHAMENTO CORRIGIDOS - PARA CRIAR POSTAGEM DIRETAMENTE
   async shareToInstagram() {
     if (!this.shareImageUrl) {
       await this.generateShareImage(this.currentTeam, this.getTeamPosition());
     }
 
     if (this.isMobile) {
-      // Primeiro baixa a imagem
-      this.downloadImage();
+      // Primeiro baixa a imagem para a galeria
+      await this.downloadImageToGallery();
 
-      // Deep links corrigidos para Instagram
-      const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
+      if (this.isIOS()) {
+        // iOS - Instagram Stories
+        const instagramUrl = `instagram-stories://share?source_application=com.birdbox.game&backgroundImage=${encodeURIComponent(
+          this.shareImageUrl
+        )}&sticker=birdbox`;
+        window.location.href = instagramUrl;
 
-      if (isIOS) {
-        // iOS - usa esquema específico
-        const instagramUrl = `instagram://library?LocalIdentifier=`;
-        window.location.href = instagramUrl;
-      } else {
-        // Android - usa intent
-        const instagramUrl = `intent://library#Intent;package=com.instagram.android;scheme=instagram;end;`;
-        window.location.href = instagramUrl;
+        // Fallback para criar post normal
+        setTimeout(() => {
+          if (!document.hidden) {
+            const fallbackUrl = `instagram://camera`;
+            window.location.href = fallbackUrl;
+            this.showInstagramInstructions();
+          }
+        }, 1500);
+      } else if (this.isAndroid()) {
+        // Android - Instagram com intent de compartilhamento
+        this.shareViaAndroidIntent("com.instagram.android", "Instagram");
       }
-
-      // Fallback após delay
-      setTimeout(() => {
-        if (!document.hidden) {
-          this.showImageShareInstructions("Instagram");
-        }
-      }, 1000);
     } else {
       this.downloadImageWithInstructions("Instagram");
     }
@@ -326,20 +336,16 @@ class ShareManager {
     }
 
     if (this.isMobile) {
-      // Primeiro baixa a imagem
-      this.downloadImage();
+      // Baixa a imagem primeiro
+      await this.downloadImageToGallery();
 
-      // Deep links para TikTok
-      const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
-
-      if (isIOS) {
-        // iOS
-        const tiktokUrl = `snssdk1233://`;
+      if (this.isIOS()) {
+        // iOS - TikTok - Tenta abrir a criação de conteúdo
+        const tiktokUrl = `snssdk1233://compose`;
         window.location.href = tiktokUrl;
-      } else {
-        // Android
-        const tiktokUrl = `intent://com.zhiliaoapp.musically/#Intent;package=com.zhiliaoapp.musically;scheme=snssdk1233;end;`;
-        window.location.href = tiktokUrl;
+      } else if (this.isAndroid()) {
+        // Android - TikTok com intent
+        this.shareViaAndroidIntent("com.zhiliaoapp.musically", "TikTok");
       }
 
       // Instruções após tentar abrir o app
@@ -355,15 +361,13 @@ class ShareManager {
     const text = encodeURIComponent(this.shareText);
 
     if (this.isMobile) {
-      const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
-
-      if (isIOS) {
-        // iOS Twitter
+      if (this.isIOS()) {
+        // iOS Twitter - Abre composer com o texto
         const twitterUrl = `twitter://post?message=${text}`;
         window.location.href = twitterUrl;
-      } else {
-        // Android Twitter/X
-        const twitterUrl = `intent://com.twitter.android.compose/post?text=${text}#Intent;package=com.twitter.android;scheme=twitter;end;`;
+      } else if (this.isAndroid()) {
+        // Android Twitter/X - Abre composer
+        const twitterUrl = `intent://compose?text=${text}#Intent;package=com.twitter.android;scheme=twitter;end;`;
         window.location.href = twitterUrl;
       }
 
@@ -384,15 +388,13 @@ class ShareManager {
     const text = encodeURIComponent(this.shareText);
 
     if (this.isMobile) {
-      const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
-
-      if (isIOS) {
-        // iOS Facebook
+      if (this.isIOS()) {
+        // iOS Facebook - Abre composer
         const facebookUrl = `fb://publish/?text=${text}`;
         window.location.href = facebookUrl;
-      } else {
-        // Android Facebook
-        const facebookUrl = `intent://com.facebook.katana/share?text=${text}#Intent;package=com.facebook.katana;scheme=fb;end;`;
+      } else if (this.isAndroid()) {
+        // Android Facebook - Abre composer
+        const facebookUrl = `intent://post?text=${text}#Intent;package=com.facebook.katana;scheme=fb;end;`;
         window.location.href = facebookUrl;
       }
 
@@ -413,14 +415,12 @@ class ShareManager {
     const text = encodeURIComponent(this.shareText);
 
     if (this.isMobile) {
-      const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
-
-      if (isIOS) {
-        // iOS WhatsApp
+      if (this.isIOS()) {
+        // iOS WhatsApp - Abre chat com texto pré-preenchido
         const whatsappUrl = `whatsapp://send?text=${text}`;
         window.location.href = whatsappUrl;
-      } else {
-        // Android WhatsApp
+      } else if (this.isAndroid()) {
+        // Android WhatsApp - Abre chat com texto
         const whatsappUrl = `intent://send?text=${text}#Intent;package=com.whatsapp;scheme=whatsapp;end;`;
         window.location.href = whatsappUrl;
       }
@@ -436,6 +436,80 @@ class ShareManager {
       const url = `https://api.whatsapp.com/send?text=${text}`;
       window.open(url, "_blank");
     }
+  }
+
+  // Método para baixar imagem para galeria (simulado)
+  async downloadImageToGallery() {
+    return new Promise((resolve) => {
+      this.downloadImage();
+      // Dar tempo para o download completar
+      setTimeout(resolve, 1000);
+    });
+  }
+
+  // Compartilhamento via Intent do Android
+  shareViaAndroidIntent(packageName, appName) {
+    try {
+      // Tenta usar a Web Share API primeiro
+      if (navigator.share) {
+        this.shareNative();
+        return;
+      }
+
+      // Fallback para download + instruções
+      this.downloadImage();
+      setTimeout(() => {
+        this.showImageShareInstructions(appName);
+      }, 500);
+    } catch (error) {
+      console.error(`❌ Erro ao compartilhar no ${appName}:`, error);
+      this.downloadImage();
+      this.showImageShareInstructions(appName);
+    }
+  }
+
+  // Instruções específicas para Instagram
+  showInstagramInstructions() {
+    const message = `📸 Para postar no Instagram:\n\n1. A imagem foi salva na sua galeria\n2. Toque no ícone ➕ para criar novo post\n3. Selecione a imagem da galeria\n4. Ajuste o post e adicione:\n   #SemanaDaBibliotecaSENAIUberaba\n   #BirdBoxGame\n   #SENAIUberaba`;
+
+    // Mostra alerta após um delay para não interferir com a abertura do app
+    setTimeout(() => {
+      if (
+        confirm(
+          message +
+            "\n\nClique em OK se precisar de ajuda para encontrar a imagem."
+        )
+      ) {
+        this.showExtraHelp("Instagram");
+      }
+    }, 2000);
+  }
+
+  // Instruções específicas para TikTok
+  showTikTokInstructions() {
+    const message = `🎵 Para postar no TikTok:\n\n1. Abra o TikTok\n2. Toque em "+" para criar\n3. Selecione "Upload"\n4. Escolha a imagem da galeria\n5. Adicione as hashtags:\n   #SemanaDaBibliotecaSENAIUberaba\n   #BirdBoxGame\n   #SENAIUberaba`;
+
+    setTimeout(() => {
+      alert(message);
+    }, 1500);
+  }
+
+  // Instruções para compartilhar imagem
+  showImageShareInstructions(appName) {
+    const message = `📸 Para compartilhar no ${appName}:\n\n1. A imagem foi salva automaticamente\n2. Abra o ${appName}\n3. Crie um novo post\n4. Selecione a imagem da galeria\n5. Use as hashtags:\n   #SemanaDaBibliotecaSENAIUberaba\n   #BirdBoxGame\n   #SENAIUberaba`;
+
+    setTimeout(() => {
+      alert(message);
+    }, 500);
+  }
+
+  // Ajuda extra para encontrar a imagem
+  showExtraHelp(appName) {
+    const helpMessage = `🔍 Dica para encontrar a imagem:\n\n1. Abra a Galeria de Fotos\n2. Procure na pasta "Downloads"\n3. O nome do arquivo é: "birdbox-${this.currentTeam.nome
+      .replace(/\s+/g, "-")
+      .toLowerCase()}.png"\n4. Ou procure a imagem mais recente`;
+
+    alert(helpMessage);
   }
 
   // MÉTODO CORRIGIDO: Download da imagem
@@ -464,27 +538,11 @@ class ShareManager {
     }
   }
 
-  // Instruções para compartilhar imagem
-  showImageShareInstructions(appName) {
-    setTimeout(() => {
-      const message = `📸 Para compartilhar no ${appName}:\n\n1. A imagem foi salva automaticamente\n2. Abra o ${appName}\n3. Crie um novo post\n4. Selecione a imagem da galeria\n5. Use as hashtags:\n   #SemanaDaBibliotecaSENAIUberaba\n   #BirdBoxGame`;
-
-      alert(message);
-    }, 500);
-  }
-
-  // Instruções específicas para TikTok
-  showTikTokInstructions() {
-    const message = `🎵 Para compartilhar no TikTok:\n\n1. Abra o TikTok\n2. Toque em "+" para criar\n3. Selecione "Upload"\n4. Escolha a imagem da galeria\n5. Use as hashtags:\n   #SemanaDaBibliotecaSENAIUberaba\n   #BirdBoxGame\n   #SENAIUberaba`;
-
-    alert(message);
-  }
-
   // Download com instruções para desktop
   downloadImageWithInstructions(appName) {
     this.downloadImage();
     alert(
-      `📸 Para compartilhar no ${appName}:\n\n1. A imagem foi salva no seu dispositivo\n2. Abra o ${appName}\n3. Faça um post com a imagem\n4. Use as hashtags: #SemanaDaBibliotecaSENAIUberaba #BirdBoxGame`
+      `📸 Para compartilhar no ${appName}:\n\n1. A imagem foi salva no seu dispositivo\n2. Abra o ${appName}\n3. Crie um novo post com a imagem\n4. Use as hashtags: #SemanaDaBibliotecaSENAIUberaba #BirdBoxGame #SENAIUberaba`
     );
   }
 
