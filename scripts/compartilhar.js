@@ -61,7 +61,7 @@ class ShareManager {
   async generateShareImage(team, position) {
     return new Promise((resolve) => {
       const canvas = document.createElement("canvas");
-      canvas.width = 1080; // Ideal para Instagram
+      canvas.width = 1080;
       canvas.height = 1080;
       const ctx = canvas.getContext("2d");
 
@@ -286,20 +286,35 @@ class ShareManager {
     }
   }
 
-  // COMPARTILHAMENTO AUTOMATIZADO PARA MOBILE
+  // DEEP LINKS CORRIGIDOS PARA APLICATIVOS NATIVOS
   async shareToInstagram() {
     if (!this.shareImageUrl) {
       await this.generateShareImage(this.currentTeam, this.getTeamPosition());
     }
 
     if (this.isMobile) {
-      // Tentar abrir o Instagram diretamente
-      const instagramUrl = `instagram://library?assetPath=${encodeURIComponent(
-        this.shareImageUrl
-      )}`;
-      const fallbackUrl = `https://www.instagram.com/create/story/`;
+      // Primeiro baixa a imagem
+      this.downloadImage();
 
-      this.openAppOrFallback(instagramUrl, fallbackUrl, "Instagram");
+      // Deep links corrigidos para Instagram
+      const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
+
+      if (isIOS) {
+        // iOS - usa esquema específico
+        const instagramUrl = `instagram://library?LocalIdentifier=`;
+        window.location.href = instagramUrl;
+      } else {
+        // Android - usa intent
+        const instagramUrl = `intent://library#Intent;package=com.instagram.android;scheme=instagram;end;`;
+        window.location.href = instagramUrl;
+      }
+
+      // Fallback após delay
+      setTimeout(() => {
+        if (!document.hidden) {
+          this.showImageShareInstructions("Instagram");
+        }
+      }, 1000);
     } else {
       this.downloadImageWithInstructions("Instagram");
     }
@@ -311,16 +326,26 @@ class ShareManager {
     }
 
     if (this.isMobile) {
-      // TikTok não tem deep link direto para upload, então usamos o esquema universal
-      const tiktokUrl = `tiktok://`;
-      const fallbackUrl = `https://www.tiktok.com/upload?`;
+      // Primeiro baixa a imagem
+      this.downloadImage();
 
-      this.openAppOrFallback(tiktokUrl, fallbackUrl, "TikTok");
+      // Deep links para TikTok
+      const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
 
-      // Dar instruções após tentar abrir o app
+      if (isIOS) {
+        // iOS
+        const tiktokUrl = `snssdk1233://`;
+        window.location.href = tiktokUrl;
+      } else {
+        // Android
+        const tiktokUrl = `intent://com.zhiliaoapp.musically/#Intent;package=com.zhiliaoapp.musically;scheme=snssdk1233;end;`;
+        window.location.href = tiktokUrl;
+      }
+
+      // Instruções após tentar abrir o app
       setTimeout(() => {
         this.showTikTokInstructions();
-      }, 1000);
+      }, 1500);
     } else {
       this.downloadImageWithInstructions("TikTok");
     }
@@ -330,11 +355,25 @@ class ShareManager {
     const text = encodeURIComponent(this.shareText);
 
     if (this.isMobile) {
-      // Tentar abrir app do Twitter/X
-      const twitterUrl = `twitter://post?message=${text}`;
-      const fallbackUrl = `https://twitter.com/intent/tweet?text=${text}`;
+      const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
 
-      this.openAppOrFallback(twitterUrl, fallbackUrl, "Twitter");
+      if (isIOS) {
+        // iOS Twitter
+        const twitterUrl = `twitter://post?message=${text}`;
+        window.location.href = twitterUrl;
+      } else {
+        // Android Twitter/X
+        const twitterUrl = `intent://com.twitter.android.compose/post?text=${text}#Intent;package=com.twitter.android;scheme=twitter;end;`;
+        window.location.href = twitterUrl;
+      }
+
+      // Fallback
+      setTimeout(() => {
+        if (!document.hidden) {
+          const fallbackUrl = `https://twitter.com/intent/tweet?text=${text}`;
+          window.open(fallbackUrl, "_blank");
+        }
+      }, 1000);
     } else {
       const url = `https://twitter.com/intent/tweet?text=${text}`;
       window.open(url, "_blank", "width=600,height=400");
@@ -345,11 +384,25 @@ class ShareManager {
     const text = encodeURIComponent(this.shareText);
 
     if (this.isMobile) {
-      // Tentar abrir app do Facebook
-      const facebookUrl = `fb://publish/?text=${text}`;
-      const fallbackUrl = `https://www.facebook.com/sharer/sharer.php?quote=${text}`;
+      const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
 
-      this.openAppOrFallback(facebookUrl, fallbackUrl, "Facebook");
+      if (isIOS) {
+        // iOS Facebook
+        const facebookUrl = `fb://publish/?text=${text}`;
+        window.location.href = facebookUrl;
+      } else {
+        // Android Facebook
+        const facebookUrl = `intent://com.facebook.katana/share?text=${text}#Intent;package=com.facebook.katana;scheme=fb;end;`;
+        window.location.href = facebookUrl;
+      }
+
+      // Fallback
+      setTimeout(() => {
+        if (!document.hidden) {
+          const fallbackUrl = `https://www.facebook.com/sharer/sharer.php?quote=${text}`;
+          window.open(fallbackUrl, "_blank");
+        }
+      }, 1000);
     } else {
       const url = `https://www.facebook.com/sharer/sharer.php?quote=${text}`;
       window.open(url, "_blank", "width=600,height=400");
@@ -360,11 +413,25 @@ class ShareManager {
     const text = encodeURIComponent(this.shareText);
 
     if (this.isMobile) {
-      // Tentar abrir app do WhatsApp
-      const whatsappUrl = `whatsapp://send?text=${text}`;
-      const fallbackUrl = `https://api.whatsapp.com/send?text=${text}`;
+      const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
 
-      this.openAppOrFallback(whatsappUrl, fallbackUrl, "WhatsApp");
+      if (isIOS) {
+        // iOS WhatsApp
+        const whatsappUrl = `whatsapp://send?text=${text}`;
+        window.location.href = whatsappUrl;
+      } else {
+        // Android WhatsApp
+        const whatsappUrl = `intent://send?text=${text}#Intent;package=com.whatsapp;scheme=whatsapp;end;`;
+        window.location.href = whatsappUrl;
+      }
+
+      // Fallback
+      setTimeout(() => {
+        if (!document.hidden) {
+          const fallbackUrl = `https://api.whatsapp.com/send?text=${text}`;
+          window.open(fallbackUrl, "_blank");
+        }
+      }, 1000);
     } else {
       const url = `https://api.whatsapp.com/send?text=${text}`;
       window.open(url, "_blank");
@@ -391,36 +458,10 @@ class ShareManager {
       document.body.removeChild(link);
 
       console.log("📥 Imagem salva automaticamente para compartilhamento");
-
-      // Mostrar instruções para mobile
-      if (this.isMobile) {
-        setTimeout(() => {
-          this.showMobileDownloadInstructions();
-        }, 500);
-      }
     } catch (error) {
       console.error("❌ Erro ao baixar imagem:", error);
       this.showError("Erro ao baixar imagem. Tente novamente.");
     }
-  }
-
-  // Método para abrir app ou fallback
-  openAppOrFallback(appUrl, fallbackUrl, appName) {
-    // Tentar abrir o app
-    window.location.href = appUrl;
-
-    // Se não abrir em 500ms, vai para fallback
-    setTimeout(() => {
-      if (!document.hidden) {
-        console.log(`📱 ${appName} não encontrado, abrindo fallback`);
-        window.open(fallbackUrl, "_blank");
-
-        // Mostrar instruções específicas
-        if (appName === "Instagram" || appName === "TikTok") {
-          this.showImageShareInstructions(appName);
-        }
-      }
-    }, 500);
   }
 
   // Instruções para compartilhar imagem
@@ -428,16 +469,8 @@ class ShareManager {
     setTimeout(() => {
       const message = `📸 Para compartilhar no ${appName}:\n\n1. A imagem foi salva automaticamente\n2. Abra o ${appName}\n3. Crie um novo post\n4. Selecione a imagem da galeria\n5. Use as hashtags:\n   #SemanaDaBibliotecaSENAIUberaba\n   #BirdBoxGame`;
 
-      if (
-        confirm(
-          message +
-            "\n\nClique em OK para abrir a galeria e selecionar a imagem."
-        )
-      ) {
-        // Tentar abrir a galeria ou file picker
-        this.triggerImageDownload();
-      }
-    }, 1000);
+      alert(message);
+    }, 500);
   }
 
   // Instruções específicas para TikTok
@@ -445,19 +478,6 @@ class ShareManager {
     const message = `🎵 Para compartilhar no TikTok:\n\n1. Abra o TikTok\n2. Toque em "+" para criar\n3. Selecione "Upload"\n4. Escolha a imagem da galeria\n5. Use as hashtags:\n   #SemanaDaBibliotecaSENAIUberaba\n   #BirdBoxGame\n   #SENAIUberaba`;
 
     alert(message);
-    this.triggerImageDownload();
-  }
-
-  // Instruções para download em mobile
-  showMobileDownloadInstructions() {
-    const message = `📱 Imagem salva na galeria!\n\nAgora você pode:\n\n1. Abrir Instagram/TikTok\n2. Criar novo post\n3. Selecionar esta imagem\n4. Usar as hashtags:\n   #SemanaDaBibliotecaSENAIUberaba\n   #BirdBoxGame`;
-
-    alert(message);
-  }
-
-  // Download automático da imagem (método auxiliar)
-  triggerImageDownload() {
-    this.downloadImage();
   }
 
   // Download com instruções para desktop
@@ -482,6 +502,14 @@ class ShareManager {
   async shareNative() {
     if (navigator.share) {
       try {
+        // Primeiro baixa a imagem para garantir que está disponível
+        if (!this.shareImageUrl) {
+          await this.generateShareImage(
+            this.currentTeam,
+            this.getTeamPosition()
+          );
+        }
+
         // Converter data URL para blob para compartilhamento nativo
         const response = await fetch(this.shareImageUrl);
         const blob = await response.blob();
@@ -525,6 +553,31 @@ if (typeof window !== "undefined") {
   // Adicionar função global para download
   window.downloadShareImage = function () {
     shareManager.downloadImage();
+  };
+
+  // Adicionar funções globais para compartilhamento específico
+  window.shareToInstagram = function () {
+    shareManager.shareToInstagram();
+  };
+
+  window.shareToTikTok = function () {
+    shareManager.shareToTikTok();
+  };
+
+  window.shareToTwitter = function () {
+    shareManager.shareToTwitter();
+  };
+
+  window.shareToFacebook = function () {
+    shareManager.shareToFacebook();
+  };
+
+  window.shareToWhatsApp = function () {
+    shareManager.shareToWhatsApp();
+  };
+
+  window.shareNative = function () {
+    shareManager.shareNative();
   };
 
   // Adicionar botão de compartilhamento nativo se disponível
