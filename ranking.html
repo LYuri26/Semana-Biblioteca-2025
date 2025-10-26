@@ -14,10 +14,10 @@
         <div class="ranking-container">
             <div class="text-center mb-4">
                 <h1 class="ranking-title display-4 fw-bold mb-3">
-                    🏆 Ranking de Jogadores
+                    🏆 Ranking de Duplas
                 </h1>
                 <p class="ranking-subtitle text-light opacity-75">
-                    Os melhores jogadores do BirdBox
+                    As melhores duplas do BirdBox - #SemanaDaBibliotecaSENAIUberaba
                 </p>
             </div>
 
@@ -26,8 +26,9 @@
                     <thead class="ranking-header">
                         <tr>
                             <th class="text-center">#</th>
-                            <th>Jogador</th>
+                            <th>Dupla</th>
                             <th class="text-center">Pontuação</th>
+                            <th class="text-center">Compartilhar</th>
                         </tr>
                     </thead>
                     <tbody id="rankingBody">
@@ -43,11 +44,66 @@
                 </table>
             </div>
 
-            <div class="actions mt-4">
-                <button id="backMenu" class="btn-back btn btn-primary btn-lg px-4 py-2">
+            <div class="actions mt-4 text-center">
+                <button id="backMenu" class="btn-back btn btn-primary btn-lg px-4 py-2 me-3">
                     <i class="bi bi-arrow-left me-2"></i>
                     Voltar ao Menu
                 </button>
+
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal de Compartilhamento -->
+    <div id="shareModal" class="share-modal" style="display: none;">
+        <div class="share-modal-content">
+            <div class="share-modal-header">
+                <h3>🎉 Compartilhar Conquista!</h3>
+                <button class="share-close-btn" onclick="shareManager.closeModal()">
+                    <i class="bi bi-x-lg"></i>
+                </button>
+            </div>
+
+            <div class="share-preview-container">
+                <div id="sharePreview" class="share-preview">
+                    <!-- Preview da imagem será gerado aqui -->
+                </div>
+            </div>
+
+            <div class="share-actions">
+                <p class="share-instruction">Compartilhe nas redes sociais:</p>
+
+                <div class="share-buttons-grid">
+                    <button class="share-btn instagram" onclick="shareManager.shareToInstagram()">
+                        <i class="bi bi-instagram"></i>
+                        <span>Instagram</span>
+                    </button>
+
+                    <button class="share-btn tiktok" onclick="shareManager.shareToTikTok()">
+                        <i class="bi bi-tiktok"></i>
+                        <span>TikTok</span>
+                    </button>
+
+                    <button class="share-btn twitter" onclick="shareManager.shareToTwitter()">
+                        <i class="bi bi-twitter-x"></i>
+                        <span>Twitter/X</span>
+                    </button>
+
+                    <button class="share-btn facebook" onclick="shareManager.shareToFacebook()">
+                        <i class="bi bi-facebook"></i>
+                        <span>Facebook</span>
+                    </button>
+
+                    <button class="share-btn whatsapp" onclick="shareManager.shareToWhatsApp()">
+                        <i class="bi bi-whatsapp"></i>
+                        <span>WhatsApp</span>
+                    </button>
+
+                    <button class="share-btn download" onclick="downloadShareImage()">
+                        <i class="bi bi-download"></i>
+                        <span>Salvar Imagem</span>
+                    </button>
+                </div>
             </div>
         </div>
     </div>
@@ -63,6 +119,7 @@
     <script src="scripts/firebase/config.js"></script>
     <script src="scripts/firebase/database.js"></script>
     <script src="scripts/ranking.js"></script>
+    <script src="scripts/compartilhar.js"></script>
 </body>
 
 </html>

@@ -78,44 +78,52 @@ class RankingManager {
     const rankingBody = document.getElementById("rankingBody");
 
     if (this.rankingData.length === 0) {
-      rankingBody.innerHTML = this.getEmptyStateHTML();
+      this.showEmptyState();
       return;
     }
 
     rankingBody.innerHTML = this.rankingData
       .map(
         (dupla, index) => `
-        <tr class="ranking-row">
-          <td class="text-center fw-bold position-cell">
-            <div class="position-badge ${
-              index < 3 ? "top-" + (index + 1) : ""
-            }">
-              ${index + 1}
-            </div>
-          </td>
-          <td class="player-name">
-            <div class="d-flex align-items-center">
-              <div class="dupla-avatar bg-primary rounded-circle d-flex align-items-center justify-content-center me-3" 
-                   style="width: 40px; height: 40px; font-size: 0.9rem;">
-                👥
-              </div>
-              <div>
-                <div class="fw-semibold">${this.escapeHtml(dupla.nome)}</div>
-                <small class="text-muted">Dupla</small>
-              </div>
-            </div>
-          </td>
-          <td class="text-center">
-            <span class="pontuacao-badge badge bg-success rounded-pill px-3 py-2">
-              ${dupla.pontuacao.toLocaleString("pt-BR")} pts
-            </span>
-          </td>
-        </tr>
-      `
+            <tr class="ranking-row">
+                <td class="text-center fw-bold position-cell">
+                    <div class="position-badge ${
+                      index < 3 ? "top-" + (index + 1) : ""
+                    }">
+                        ${index + 1}
+                    </div>
+                </td>
+                <td class="player-name">
+                    <div class="d-flex align-items-center">
+                        <div class="dupla-avatar bg-primary rounded-circle d-flex align-items-center justify-content-center me-3" 
+                             style="width: 40px; height: 40px; font-size: 0.9rem;">
+                            👥
+                        </div>
+                        <div>
+                            <div class="fw-semibold">${this.escapeHtml(
+                              dupla.nome
+                            )}</div>
+                            <small class="text-muted">Dupla</small>
+                        </div>
+                    </div>
+                </td>
+                <td class="text-center">
+                    <span class="pontuacao-badge badge bg-success rounded-pill px-3 py-2">
+                        ${dupla.pontuacao.toLocaleString("pt-BR")} pts
+                    </span>
+                </td>
+                <td class="text-center">
+                    <button class="btn-share-team share-pulse" onclick="shareTeam(${index})"
+                            data-bs-toggle="tooltip" data-bs-title="Compartilhar conquista da dupla">
+                        <i class="bi bi-share-fill me-1"></i>
+                        Compartilhar
+                    </button>
+                </td>
+            </tr>
+        `
       )
       .join("");
 
-    // Adicionar estilos para as primeiras posições
     this.addRankingStyles();
   }
 
