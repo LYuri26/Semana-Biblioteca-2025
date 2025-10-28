@@ -1,3 +1,4 @@
+let jogoFinalizado = false;
 // Gerenciador do adivinhador
 class IdentifierManager {
   // Configurar UI do adivinhador
@@ -22,8 +23,7 @@ class IdentifierManager {
     if (finishButton) {
       finishButton.addEventListener("click", () => {
         gameManager.playerFinishedGame();
-        finishButton.disabled = true;
-        finishButton.classList.add("disabled-btn");
+        travarBotoes(); // trava tudo imediatamente
       });
     }
 
@@ -118,6 +118,7 @@ class IdentifierManager {
 
   // CORREÇÃO: Habilitar opções de resposta completamente
   static enableAnswerOptions() {
+    if (window.jogoFinalizado) return; // impede reativação após finalização
     const options = document.querySelectorAll(".option-btn");
     const submitButton = document.getElementById("submitAnswer");
 
@@ -133,6 +134,12 @@ class IdentifierManager {
 
   // Selecionar opção - VERSÃO CORRIGIDA
   static selectOption(optionElement) {
+    if (window.jogoFinalizado) {
+      console.log("⚠️ O jogo já acabou — ação ignorada");
+      return;
+    }
+
+    if (window.jogoFinalizado) return; // impede cliques após finalização
     if (optionElement.classList.contains("disabled")) {
       console.log("⚠️ Opção desabilitada, ignorando clique");
       return;
@@ -163,6 +170,11 @@ class IdentifierManager {
 
   // Submeter resposta - VERSÃO COM TEMPO
   static async submitAnswer(gameManager) {
+    if (window.jogoFinalizado) {
+      console.log("⚠️ O jogo já acabou — ação ignorada");
+      return;
+    }
+
     const submitButton = document.getElementById("submitAnswer");
     const startTime = gameManager.questionStartTime || Date.now();
 
@@ -426,4 +438,58 @@ class IdentifierManager {
       return 100; // Fallback seguro
     }
   }
+}
+
+// --- Atualize a função travarBotoes() para marcar o overlay corretamente ---
+function travarBotoes() {
+  jogoFinalizado = true;
+
+  // Desabilita botões do jogo
+  const botoesJogo = document.querySelectorAll(
+    ".option-btn, #submitAnswer, #finishGameIdentifier"
+  );
+  botoesJogo.forEach((botao) => {
+    botao.disabled = true;
+    botao.classList.add("disabled-btn");
+    botao.style.opacity = "0.6";
+    botao.style.cursor = "not-allowed";
+  });
+
+  // Overlay cobrindo tudo
+  let overlay = document.getElementById("bloqueioTotal");
+  if (!overlay) {
+    overlay = document.createElement("div");
+    overlay.id = "bloqueioTotal";
+    overlay.style.position = "fixed";
+    overlay.style.top = "0";
+    overlay.style.left = "0";
+    overlay.style.width = "100vw";
+    overlay.style.height = "100vh";
+    overlay.style.backgroundColor = "rgba(0,0,0,0.6)";
+    overlay.style.pointerEvents = "all"; // bloqueia cliques
+    document.body.appendChild(overlay);
+  }
+
+  console.log("🔒 Jogo finalizado — tudo bloqueado, incluindo modal.");
+}
+
+function destravarBotoes() {
+  jogoFinalizado = false;
+
+  // Reabilita botões do jogo
+  const botoesJogo = document.querySelectorAll(
+    ".option-btn, #submitAnswer, #finishGameIdentifier"
+  );
+  botoesJogo.forEach((b) => {
+    b.disabled = false;
+    b.classList.remove("disabled-btn");
+    b.style.opacity = "";
+    b.style.cursor = "";
+  });
+
+  // Remove overlay
+  const overlay = document.getElementById("bloqueioTotal");
+  if (overlay) overlay.remove();
+
+  console.log("🔓 Botões do jogo desbloqueados.");
 }

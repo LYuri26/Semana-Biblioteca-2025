@@ -290,6 +290,10 @@ body {
   }
 }
 
+#shareModal {
+  z-index: 10000 !important; /* acima do overlay */
+}
+
 /* Dark mode improvements */
 @media (prefers-color-scheme: dark) {
   .ranking-container {
@@ -357,6 +361,7 @@ body {
   animation: modalFadeIn 0.4s ease-out;
   padding: 1rem;
   box-sizing: border-box;
+  z-index: 10000;
 }
 
 .share-modal-content {

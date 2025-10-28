@@ -996,7 +996,6 @@ class GameManager {
     container.prepend(errorElement);
     return errorElement;
   }
-
   // Avançar para próxima rodada
   async advanceToNextRound() {
     if (this.isAdvancing) return;
@@ -1010,6 +1009,7 @@ class GameManager {
 
     try {
       if (this.currentRound < this.totalRounds) {
+        // Avança normalmente
         this.currentRound++;
         console.log(
           "➡️",
@@ -1028,14 +1028,23 @@ class GameManager {
           this.currentRound
         );
       } else if (this.currentRound === this.totalRounds) {
+        // 🏁 Última rodada concluída — travar tudo
         console.log(
-          "🎯",
+          "🏁",
           this.playerRole,
-          "na última rodada:",
+          "finalizou a última rodada:",
           this.currentRound
         );
+
         this.currentRound = this.totalRounds;
         this.updateRoundDisplay();
+
+        // Aguarda um pequeno delay pra garantir que os dados foram salvos
+        setTimeout(() => {
+          if (typeof travarBotoes === "function") {
+            travarBotoes();
+          }
+        }, 1000);
       }
     } catch (error) {
       console.error("❌ Erro em advanceToNextRound:", error);
@@ -1348,3 +1357,18 @@ document.addEventListener("DOMContentLoaded", function () {
     window.location.href = "index.html";
   }
 });
+
+// 🔄 Monitorar exibição do overlay de fim de jogo e destravar automaticamente
+const observer = new MutationObserver(() => {
+  const gameOverOverlay = document.getElementById("gameOverOverlay");
+  if (gameOverOverlay && gameOverOverlay.classList.contains("active")) {
+    // Quando o overlay "Fim de Jogo" aparecer, destrava tudo
+    console.log(
+      "🎉 Fim de jogo detectado — destravando interface para botões do modal."
+    );
+    if (typeof destravarBotoes === "function") destravarBotoes();
+  }
+});
+
+// Observa mudanças na estrutura do body (para detectar o overlay ativado)
+observer.observe(document.body, { childList: true, subtree: true });
